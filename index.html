@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="pt-BR" class="is-loading">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#170403" />
+  <title>OituAwards</title>
+
+  <style id="bootStyles">
+    html.is-loading,html.is-loading body{margin:0;background:#180403;overflow:hidden}
+    html.is-loading .app-shell{visibility:hidden;pointer-events:none}
+    #bootLoader{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;padding:24px;background:radial-gradient(ellipse at 50% 42%,#51120c 0%,#260605 48%,#120202 100%);color:#e8bd76;font-family:Arial,sans-serif;opacity:1;transition:opacity .55s ease;overflow:hidden}
+    #bootLoader[hidden]{display:none!important} #bootLoader.is-revealing{opacity:0;pointer-events:none}
+    .boot-content{width:min(390px,88vw);position:relative;z-index:1}
+    .boot-mark{font-size:35px;line-height:1;color:#f3cf87;margin-bottom:19px;text-shadow:0 0 24px #dca953;animation:bootGlow 2s ease-in-out infinite}
+    .boot-title{font:600 clamp(42px,10vw,72px)/1 Georgia,serif;letter-spacing:-.055em;color:#f5d18d;margin:0 0 14px;text-shadow:0 3px 22px #c078322f}
+    .boot-kicker{font-size:10px;letter-spacing:.23em;text-transform:uppercase;color:#c9a36c;margin:0 0 28px}
+    .boot-track{height:5px;border-radius:12px;background:#77482f;overflow:hidden;margin:0 0 14px;box-shadow:0 0 0 1px #ba7a323b}
+    #bootBar{height:100%;width:100%;transform:scaleX(0);transform-origin:left;background:linear-gradient(90deg,#a86b2d,#ffe1a0);transition:transform .18s ease;box-shadow:0 0 12px #f2bb64}
+    #bootPercent{font-size:22px;letter-spacing:.04em;font-variant-numeric:tabular-nums;margin:0 0 10px;color:#ffda98}
+    #bootStatus{font-size:13px;line-height:1.5;color:#ddc3a1;min-height:42px;margin:0}
+    #bootRetry{border:1px solid #e3bc78;border-radius:30px;color:#2b0904;background:#e9ba70;padding:11px 23px;font:600 13px Arial,sans-serif;margin-top:15px;cursor:pointer}#bootRetry[hidden]{display:none}
+    @keyframes bootGlow{50%{opacity:.65;transform:scale(.94)}}
+    @media(prefers-reduced-motion:reduce){#bootLoader,.boot-mark,#bootBar{animation:none;transition:none}}
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="bootLoader" role="dialog" aria-modal="true" aria-labelledby="bootTitle">
+    <div class="boot-content">
+      <div class="boot-mark" aria-hidden="true">✦</div>
+      <h1 class="boot-title" id="bootTitle">OituAwards</h1>
+      <p class="boot-kicker">Preparando o palco</p>
+      <div class="boot-track" id="bootProgress" role="progressbar" aria-label="Imagens carregadas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="bootBar"></div></div>
+      <p id="bootPercent" aria-hidden="true">0%</p>
+      <p id="bootStatus" role="status" aria-live="polite">Preparando as imagens e os personagens…</p>
+      <button type="button" id="bootRetry" hidden>Tentar novamente</button>
+      <noscript>Ative o JavaScript para acessar a votação.</noscript>
+    </div>
+  </div>
+  <main class="app-shell" inert>
+    <section id="homeScreen" class="screen screen-home is-active" aria-label="Página inicial do OituAwards">
+      <header class="topbar home-topbar">
+        <a href="#" class="brand" id="homeLogo" data-home aria-label="OituAwards - Início">OituAwards</a>
+        <nav class="main-nav" aria-label="Navegação principal">
+          <button class="nav-link is-active" type="button" data-home>Início</button>
+          <button class="nav-link" type="button" id="categoriesButton">Categorias</button>
+        </nav>
+      </header>
+
+      <div class="home-content">
+        <h1 class="hero-title">OituAwards</h1>
+        <div class="ornament-line" aria-hidden="true"><span></span><i>◇</i><span></span></div>
+        <p class="hero-kicker">CELEBRANDO O QUE NOS INSPIRA</p>
+        <p class="hero-copy">Reconheça os grandes destaques do ano e ajude a<br class="desktop-only"> valorizar quem faz a diferença.</p>
+        <button id="startVotingButton" class="start-button" type="button">
+          <span>Iniciar votação</span><span class="button-arrow" aria-hidden="true">→</span>
+        </button>
+      </div>
+    </section>
+
+    <section id="categoriesScreen" class="screen screen-categories" aria-label="Categorias do OituAwards" aria-hidden="true">
+      <div class="award-scenery" aria-hidden="true">
+      <div class="scenery-halo"></div>
+      <svg class="scenery-atmosphere" viewBox="0 0 1440 900" preserveAspectRatio="none" focusable="false">
+        <defs>
+          <linearGradient id="categories-arch" x1="0" y1="1" x2="0" y2="0"><stop stop-color="#a64b12" stop-opacity="0"/><stop offset=".45" stop-color="#a65c26" stop-opacity=".22"/><stop offset=".78" stop-color="#e6a849" stop-opacity=".8"/><stop offset="1" stop-color="#fff1b2"/></linearGradient>
+          <linearGradient id="categories-floor" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#230302" stop-opacity="0"/><stop offset=".55" stop-color="#6b190d" stop-opacity=".7"/><stop offset="1" stop-color="#150202"/></linearGradient>
+          <linearGradient id="categories-edge"><stop stop-color="#5f210a" stop-opacity="0"/><stop offset=".35" stop-color="#b96525"/><stop offset=".5" stop-color="#ffe6a0"/><stop offset=".65" stop-color="#b96525"/><stop offset="1" stop-color="#5f210a" stop-opacity="0"/></linearGradient>
+        </defs>
+        
+        <g class="stage-dust"><circle cx="123.0" cy="487.4" r="1" fill="#ffbd5b" opacity="0.64"/><circle cx="1244.3" cy="307.2" r="0.7" fill="#ffbd5b" opacity="0.38"/><circle cx="77.1" cy="87.0" r="1" fill="#ffbd5b" opacity="0.20"/><circle cx="1354.5" cy="11.2" r="1" fill="#ffbd5b" opacity="0.56"/><circle cx="31.8" cy="59.9" r="1.4" fill="#ffbd5b" opacity="0.56"/><circle cx="1280.8" cy="58.7" r="2" fill="#ffbd5b" opacity="0.66"/><circle cx="135.3" cy="528.9" r="1.4" fill="#ffbd5b" opacity="0.36"/><circle cx="1382.2" cy="379.3" r="1" fill="#ffbd5b" opacity="0.48"/><circle cx="132.1" cy="329.5" r="2" fill="#ffbd5b" opacity="0.28"/><circle cx="1285.1" cy="101.2" r="0.7" fill="#ffbd5b" opacity="0.60"/><circle cx="71.9" cy="105.4" r="1.4" fill="#ffbd5b" opacity="0.65"/><circle cx="1385.3" cy="152.4" r="1.4" fill="#ffbd5b" opacity="0.40"/><circle cx="200.9" cy="434.1" r="2" fill="#ffbd5b" opacity="0.38"/><circle cx="1330.8" cy="116.7" r="1.4" fill="#ffbd5b" opacity="0.23"/><circle cx="46.3" cy="263.5" r="1.4" fill="#ffbd5b" opacity="0.43"/><circle cx="1305.6" cy="252.2" r="1" fill="#ffbd5b" opacity="0.37"/><circle cx="188.4" cy="631.1" r="1.4" fill="#ffbd5b" opacity="0.68"/><circle cx="1300.5" cy="719.7" r="0.7" fill="#ffbd5b" opacity="0.19"/><circle cx="24.1" cy="343.8" r="1" fill="#ffbd5b" opacity="0.57"/><circle cx="1273.2" cy="288.6" r="1.4" fill="#ffbd5b" opacity="0.51"/><circle cx="14.4" cy="592.2" r="1.4" fill="#ffbd5b" opacity="0.43"/><circle cx="1263.8" cy="141.3" r="0.7" fill="#ffbd5b" opacity="0.43"/><circle cx="214.4" cy="709.4" r="2" fill="#ffbd5b" opacity="0.57"/><circle cx="1374.1" cy="575.8" r="1" fill="#ffbd5b" opacity="0.41"/><circle cx="51.0" cy="539.8" r="2" fill="#ffbd5b" opacity="0.69"/><circle cx="1395.6" cy="388.8" r="1" fill="#ffbd5b" opacity="0.59"/><circle cx="68.8" cy="622.7" r="2" fill="#ffbd5b" opacity="0.16"/><circle cx="1256.8" cy="517.8" r="2" fill="#ffbd5b" opacity="0.24"/><circle cx="29.5" cy="336.6" r="1.4" fill="#ffbd5b" opacity="0.63"/><circle cx="1392.0" cy="431.7" r="2" fill="#ffbd5b" opacity="0.27"/><circle cx="195.1" cy="788.4" r="1.4" fill="#ffbd5b" opacity="0.39"/><circle cx="1371.2" cy="461.9" r="0.7" fill="#ffbd5b" opacity="0.52"/><circle cx="45.0" cy="423.6" r="1.4" fill="#ffbd5b" opacity="0.52"/><circle cx="1368.2" cy="727.0" r="2" fill="#ffbd5b" opacity="0.42"/><circle cx="190.1" cy="256.1" r="1.4" fill="#ffbd5b" opacity="0.68"/><circle cx="1232.9" cy="287.9" r="1.4" fill="#ffbd5b" opacity="0.57"/><circle cx="217.7" cy="297.8" r="0.7" fill="#ffbd5b" opacity="0.33"/><circle cx="1232.1" cy="321.8" r="2" fill="#ffbd5b" opacity="0.17"/><circle cx="26.9" cy="91.0" r="2" fill="#ffbd5b" opacity="0.63"/><circle cx="1231.7" cy="473.4" r="2" fill="#ffbd5b" opacity="0.61"/><circle cx="21.4" cy="631.9" r="2" fill="#ffbd5b" opacity="0.20"/><circle cx="1330.8" cy="794.6" r="1.4" fill="#ffbd5b" opacity="0.56"/><circle cx="23.2" cy="816.3" r="2" fill="#ffbd5b" opacity="0.34"/><circle cx="1381.4" cy="673.4" r="2" fill="#ffbd5b" opacity="0.36"/><circle cx="203.0" cy="588.6" r="0.7" fill="#ffbd5b" opacity="0.54"/><circle cx="1285.7" cy="190.2" r="0.7" fill="#ffbd5b" opacity="0.29"/><circle cx="87.3" cy="270.5" r="1.4" fill="#ffbd5b" opacity="0.35"/><circle cx="1250.0" cy="368.4" r="1" fill="#ffbd5b" opacity="0.46"/><circle cx="76.4" cy="380.9" r="1.4" fill="#ffbd5b" opacity="0.34"/><circle cx="1377.5" cy="54.7" r="1" fill="#ffbd5b" opacity="0.28"/><circle cx="89.9" cy="664.6" r="0.7" fill="#ffbd5b" opacity="0.52"/><circle cx="1382.8" cy="396.0" r="1.4" fill="#ffbd5b" opacity="0.52"/><circle cx="27.1" cy="407.2" r="1.4" fill="#ffbd5b" opacity="0.47"/><circle cx="1311.0" cy="515.2" r="1.4" fill="#ffbd5b" opacity="0.36"/><circle cx="89.7" cy="682.9" r="1.4" fill="#ffbd5b" opacity="0.43"/><circle cx="1270.0" cy="335.9" r="1" fill="#ffbd5b" opacity="0.47"/><circle cx="179.3" cy="101.6" r="1" fill="#ffbd5b" opacity="0.53"/><circle cx="1307.2" cy="684.4" r="0.7" fill="#ffbd5b" opacity="0.35"/><circle cx="208.9" cy="14.0" r="0.7" fill="#ffbd5b" opacity="0.70"/><circle cx="1363.7" cy="691.0" r="1.4" fill="#ffbd5b" opacity="0.18"/><circle cx="113.1" cy="808.5" r="1" fill="#ffbd5b" opacity="0.49"/><circle cx="1319.5" cy="492.2" r="2" fill="#ffbd5b" opacity="0.51"/><circle cx="78.9" cy="181.7" r="1.4" fill="#ffbd5b" opacity="0.19"/><circle cx="1345.4" cy="735.6" r="1.4" fill="#ffbd5b" opacity="0.62"/><circle cx="199.1" cy="538.4" r="0.7" fill="#ffbd5b" opacity="0.21"/><circle cx="1220.6" cy="131.0" r="2" fill="#ffbd5b" opacity="0.63"/><circle cx="196.7" cy="36.8" r="1.4" fill="#ffbd5b" opacity="0.37"/><circle cx="1407.9" cy="643.6" r="1" fill="#ffbd5b" opacity="0.56"/><circle cx="37.3" cy="26.7" r="2" fill="#ffbd5b" opacity="0.67"/><circle cx="1342.0" cy="659.2" r="0.7" fill="#ffbd5b" opacity="0.21"/><circle cx="146.0" cy="413.6" r="1.4" fill="#ffbd5b" opacity="0.53"/><circle cx="1239.0" cy="575.5" r="0.7" fill="#ffbd5b" opacity="0.20"/><circle cx="204.8" cy="356.4" r="1" fill="#ffbd5b" opacity="0.39"/><circle cx="1264.8" cy="775.4" r="1" fill="#ffbd5b" opacity="0.22"/><circle cx="23.9" cy="728.6" r="0.7" fill="#ffbd5b" opacity="0.70"/></g>
+        <path d="M0 800H1440V900H0Z" fill="url(#categories-floor)"/>
+        <path d="M0 830 Q720 808 1440 830 M0 862 Q720 843 1440 862" fill="none" stroke="url(#categories-edge)" stroke-width="1.4" opacity=".7"/>
+        <path d="M0 887H1440" stroke="url(#categories-edge)" stroke-width="2.4"/>
+      </svg>
+      <svg class="scenery-curtain scenery-curtain-left" viewBox="0 0 260 900" preserveAspectRatio="none" focusable="false">
+      <defs>
+        <linearGradient id="categories-l-velvet" x1="0" y1="0" x2="1" y2=".3"><stop stop-color="#1b0203"/><stop offset=".16" stop-color="#54070a"/><stop offset=".31" stop-color="#8c1317"/><stop offset=".47" stop-color="#2d0305"/><stop offset=".62" stop-color="#660c0e"/><stop offset=".8" stop-color="#a1211b"/><stop offset="1" stop-color="#310304"/></linearGradient>
+        <linearGradient id="categories-l-fold" x1="0" y1="0" x2="1" y2=".1"><stop stop-color="#1b0102" stop-opacity=".75"/><stop offset=".42" stop-color="#c12c20" stop-opacity=".66"/><stop offset="1" stop-color="#260204" stop-opacity=".72"/></linearGradient>
+        <linearGradient id="categories-l-trim" x1="0" y1="0" x2="0.4" y2="1"><stop stop-color="#ffecb4"/><stop offset=".22" stop-color="#d89438"/><stop offset=".54" stop-color="#7d350e"/><stop offset=".82" stop-color="#f5ad44"/><stop offset="1" stop-color="#69210b"/></linearGradient>
+      </defs>
+      <path d="M0 0 H250 C219 136 175 270 121 404 C84 497 34 569 0 627 Z" fill="url(#categories-l-velvet)"/>
+      <path d="M0 0 H55 C42 221 27 375 0 440 Z M72 0 H117 C90 233 47 414 0 515 L0 466 C36 350 62 168 72 0Z M145 0H187 C149 243 86 434 0 580 L0 548 C61 417 115 195 145 0Z M202 0H238 C199 220 122 421 36 570 C131 350 167 184 202 0Z" fill="url(#categories-l-fold)" opacity=".78"/>
+      <path d="M248 0 C217 136 173 270 119 404 C82 497 34 569 0 625" fill="none" stroke="url(#categories-l-trim)" stroke-width="3.5"/>
+      <path d="M228 0 C198 157 146 323 82 469" fill="none" stroke="#eaa04a" stroke-width="1" opacity=".36"/>
+      <path d="M0 575 C25 550 37 590 31 690 L42 900 H0Z" fill="url(#categories-l-velvet)" opacity=".95"/>
+    </svg>
+      <svg class="scenery-curtain scenery-curtain-right" viewBox="0 0 260 900" preserveAspectRatio="none" focusable="false">
+      <defs>
+        <linearGradient id="categories-r-velvet" x1="0" y1="0" x2="1" y2=".3"><stop stop-color="#1b0203"/><stop offset=".16" stop-color="#54070a"/><stop offset=".31" stop-color="#8c1317"/><stop offset=".47" stop-color="#2d0305"/><stop offset=".62" stop-color="#660c0e"/><stop offset=".8" stop-color="#a1211b"/><stop offset="1" stop-color="#310304"/></linearGradient>
+        <linearGradient id="categories-r-fold" x1="0" y1="0" x2="1" y2=".1"><stop stop-color="#1b0102" stop-opacity=".75"/><stop offset=".42" stop-color="#c12c20" stop-opacity=".66"/><stop offset="1" stop-color="#260204" stop-opacity=".72"/></linearGradient>
+        <linearGradient id="categories-r-trim" x1="0" y1="0" x2="0.4" y2="1"><stop stop-color="#ffecb4"/><stop offset=".22" stop-color="#d89438"/><stop offset=".54" stop-color="#7d350e"/><stop offset=".82" stop-color="#f5ad44"/><stop offset="1" stop-color="#69210b"/></linearGradient>
+      </defs>
+      <path d="M0 0 H250 C219 136 175 270 121 404 C84 497 34 569 0 627 Z" fill="url(#categories-r-velvet)"/>
+      <path d="M0 0 H55 C42 221 27 375 0 440 Z M72 0 H117 C90 233 47 414 0 515 L0 466 C36 350 62 168 72 0Z M145 0H187 C149 243 86 434 0 580 L0 548 C61 417 115 195 145 0Z M202 0H238 C199 220 122 421 36 570 C131 350 167 184 202 0Z" fill="url(#categories-r-fold)" opacity=".78"/>
+      <path d="M248 0 C217 136 173 270 119 404 C82 497 34 569 0 625" fill="none" stroke="url(#categories-r-trim)" stroke-width="3.5"/>
+      <path d="M228 0 C198 157 146 323 82 469" fill="none" stroke="#eaa04a" stroke-width="1" opacity=".36"/>
+      <path d="M0 575 C25 550 37 590 31 690 L42 900 H0Z" fill="url(#categories-r-velvet)" opacity=".95"/>
+    </svg>
+      <div class="scenery-pedestal scenery-pedestal-left"></div><div class="scenery-pedestal scenery-pedestal-right"></div>
+    </div>
+      <header class="topbar categories-topbar">
+        <a href="#" class="brand brand-vote" data-home aria-label="OituAwards - Início">OituAwards</a>
+        <nav class="main-nav" aria-label="Navegação principal">
+          <button class="nav-link" type="button" data-home>Início</button>
+          <button class="nav-link is-active" type="button" aria-current="page">Categorias</button>
+        </nav>
+      </header>
+      <div id="categoriesScroll" class="screen-scroll">
+        <div class="categories-stage">
+          <div class="category-heading categories-heading">
+            <p class="category-kicker">OITUAWARDS</p>
+            <h1>Categorias</h1>
+            <div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div>
+            <p id="categoriesCount"></p>
+          </div>
+          <ol id="categoriesList" class="categories-list"></ol>
+          <button id="categoriesStartButton" class="start-button" type="button">
+            <span>Iniciar votação</span><span class="button-arrow" aria-hidden="true">→</span>
+          </button>
+          <button id="openResults" class="results-entry" type="button" aria-haspopup="dialog"><span aria-hidden="true">♙</span> Resultados</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="voteScreen" class="screen screen-vote" aria-label="Votação do OituAwards" aria-hidden="true">
+      <header class="vote-topbar">
+        <a href="#" class="brand brand-vote" data-home aria-label="OituAwards - Início">OituAwards</a>
+        <div class="award-label" aria-label="Melhores do ano"><span>MELHORES DO ANO</span><b aria-hidden="true">✦</b><i aria-hidden="true"></i></div>
+      </header>
+
+      <div id="voteScroll" class="screen-scroll">
+      <div class="vote-stage">
+        <div class="progress-wrap" aria-label="Progresso da votação">
+          <div id="progressText" class="progress-text">1 / 12</div>
+          <div class="progress-track"><span id="progressBar"></span></div>
+        </div>
+
+        <div class="category-heading">
+          <p class="category-kicker">CATEGORIA</p>
+          <h1 id="categoryTitle" tabindex="-1">Melhor Criador de Conteúdo</h1>
+          <div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div>
+          <p id="categoryDescription">Vote em quem mais se destacou ao longo do ano<br class="desktop-only"> com conteúdo relevante, criativo e autêntico.</p>
+        </div>
+
+        <div id="nomineeGrid" class="nominee-grid" role="radiogroup" aria-label="Indicados da categoria"></div>
+
+        <div class="vote-navigation">
+          <button id="previousButton" class="stage-button" type="button"><span aria-hidden="true">←</span> ANTERIOR</button>
+          <button id="nextButton" class="stage-button" type="button">PRÓXIMA <span aria-hidden="true">→</span></button>
+        </div>
+        <button id="pendingShortcut" class="pending-shortcut" type="button" hidden></button>
+      </div>
+      </div>
+    </section>
+    <section id="reviewScreen" class="screen screen-categories screen-review" aria-label="Seus votos" aria-hidden="true">
+      <div class="award-scenery" aria-hidden="true">
+      <div class="scenery-halo"></div>
+      <svg class="scenery-atmosphere" viewBox="0 0 1440 900" preserveAspectRatio="none" focusable="false">
+        <defs>
+          <linearGradient id="review-arch" x1="0" y1="1" x2="0" y2="0"><stop stop-color="#a64b12" stop-opacity="0"/><stop offset=".45" stop-color="#a65c26" stop-opacity=".22"/><stop offset=".78" stop-color="#e6a849" stop-opacity=".8"/><stop offset="1" stop-color="#fff1b2"/></linearGradient>
+          <linearGradient id="review-floor" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#230302" stop-opacity="0"/><stop offset=".55" stop-color="#6b190d" stop-opacity=".7"/><stop offset="1" stop-color="#150202"/></linearGradient>
+          <linearGradient id="review-edge"><stop stop-color="#5f210a" stop-opacity="0"/><stop offset=".35" stop-color="#b96525"/><stop offset=".5" stop-color="#ffe6a0"/><stop offset=".65" stop-color="#b96525"/><stop offset="1" stop-color="#5f210a" stop-opacity="0"/></linearGradient>
+        </defs>
+        <g class="stage-arch" fill="none"><path d="M116 860 C100 390 340 -110 720 -110 C1100 -110 1340 390 1324 860" stroke="url(#review-arch)" stroke-width="2.1"/><path d="M152 860 C140 400 365 -75 720 -75 C1075 -75 1300 400 1288 860" stroke="url(#review-arch)" stroke-width=".8" opacity=".38"/></g>
+        <g class="stage-dust"><circle cx="80.7" cy="515.3" r="0.7" fill="#ffbd5b" opacity="0.30"/><circle cx="1394.1" cy="626.7" r="1" fill="#ffbd5b" opacity="0.29"/><circle cx="55.1" cy="54.6" r="1" fill="#ffbd5b" opacity="0.43"/><circle cx="1258.6" cy="439.3" r="2" fill="#ffbd5b" opacity="0.57"/><circle cx="86.0" cy="145.9" r="1.4" fill="#ffbd5b" opacity="0.48"/><circle cx="1346.0" cy="485.3" r="1" fill="#ffbd5b" opacity="0.33"/><circle cx="185.3" cy="373.4" r="0.7" fill="#ffbd5b" opacity="0.69"/><circle cx="1289.2" cy="213.5" r="1" fill="#ffbd5b" opacity="0.24"/><circle cx="180.4" cy="721.4" r="1.4" fill="#ffbd5b" opacity="0.31"/><circle cx="1422.4" cy="296.1" r="2" fill="#ffbd5b" opacity="0.17"/><circle cx="34.1" cy="90.0" r="1" fill="#ffbd5b" opacity="0.38"/><circle cx="1324.3" cy="471.0" r="1.4" fill="#ffbd5b" opacity="0.31"/><circle cx="33.5" cy="257.1" r="1" fill="#ffbd5b" opacity="0.24"/><circle cx="1335.1" cy="455.1" r="1.4" fill="#ffbd5b" opacity="0.20"/><circle cx="168.7" cy="518.5" r="1.4" fill="#ffbd5b" opacity="0.54"/><circle cx="1249.9" cy="38.6" r="1" fill="#ffbd5b" opacity="0.27"/><circle cx="81.2" cy="695.1" r="1.4" fill="#ffbd5b" opacity="0.67"/><circle cx="1370.4" cy="125.9" r="0.7" fill="#ffbd5b" opacity="0.42"/><circle cx="110.3" cy="114.7" r="0.7" fill="#ffbd5b" opacity="0.27"/><circle cx="1297.1" cy="237.0" r="2" fill="#ffbd5b" opacity="0.38"/><circle cx="67.3" cy="316.4" r="1.4" fill="#ffbd5b" opacity="0.49"/><circle cx="1312.6" cy="740.8" r="0.7" fill="#ffbd5b" opacity="0.68"/><circle cx="98.0" cy="380.1" r="1.4" fill="#ffbd5b" opacity="0.53"/><circle cx="1415.7" cy="356.6" r="1.4" fill="#ffbd5b" opacity="0.29"/><circle cx="137.2" cy="572.6" r="2" fill="#ffbd5b" opacity="0.52"/><circle cx="1311.6" cy="290.6" r="2" fill="#ffbd5b" opacity="0.18"/><circle cx="92.5" cy="472.5" r="1.4" fill="#ffbd5b" opacity="0.32"/><circle cx="1273.6" cy="441.9" r="1.4" fill="#ffbd5b" opacity="0.55"/><circle cx="147.1" cy="686.2" r="2" fill="#ffbd5b" opacity="0.33"/><circle cx="1287.4" cy="215.9" r="0.7" fill="#ffbd5b" opacity="0.46"/><circle cx="138.9" cy="70.8" r="1.4" fill="#ffbd5b" opacity="0.42"/><circle cx="1326.8" cy="751.5" r="2" fill="#ffbd5b" opacity="0.37"/><circle cx="106.5" cy="416.4" r="1" fill="#ffbd5b" opacity="0.49"/><circle cx="1399.6" cy="472.9" r="2" fill="#ffbd5b" opacity="0.28"/><circle cx="147.8" cy="148.4" r="2" fill="#ffbd5b" opacity="0.56"/><circle cx="1351.5" cy="18.9" r="1" fill="#ffbd5b" opacity="0.22"/><circle cx="170.9" cy="535.2" r="0.7" fill="#ffbd5b" opacity="0.68"/><circle cx="1327.0" cy="13.9" r="0.7" fill="#ffbd5b" opacity="0.35"/><circle cx="96.1" cy="523.3" r="1.4" fill="#ffbd5b" opacity="0.46"/><circle cx="1358.7" cy="744.7" r="0.7" fill="#ffbd5b" opacity="0.54"/><circle cx="88.7" cy="237.5" r="2" fill="#ffbd5b" opacity="0.31"/><circle cx="1412.8" cy="707.5" r="2" fill="#ffbd5b" opacity="0.57"/><circle cx="165.9" cy="532.9" r="1.4" fill="#ffbd5b" opacity="0.57"/><circle cx="1414.9" cy="220.6" r="1" fill="#ffbd5b" opacity="0.34"/><circle cx="102.9" cy="259.9" r="1.4" fill="#ffbd5b" opacity="0.55"/><circle cx="1324.8" cy="65.1" r="1" fill="#ffbd5b" opacity="0.44"/><circle cx="183.6" cy="616.7" r="2" fill="#ffbd5b" opacity="0.45"/><circle cx="1403.1" cy="247.6" r="2" fill="#ffbd5b" opacity="0.59"/><circle cx="211.2" cy="476.2" r="1.4" fill="#ffbd5b" opacity="0.42"/><circle cx="1319.5" cy="780.8" r="2" fill="#ffbd5b" opacity="0.65"/><circle cx="66.1" cy="537.3" r="0.7" fill="#ffbd5b" opacity="0.24"/><circle cx="1345.4" cy="81.0" r="1" fill="#ffbd5b" opacity="0.45"/><circle cx="63.2" cy="353.7" r="0.7" fill="#ffbd5b" opacity="0.66"/><circle cx="1398.3" cy="144.7" r="1" fill="#ffbd5b" opacity="0.25"/><circle cx="138.2" cy="510.0" r="1" fill="#ffbd5b" opacity="0.62"/><circle cx="1353.9" cy="638.2" r="2" fill="#ffbd5b" opacity="0.18"/><circle cx="52.2" cy="655.1" r="0.7" fill="#ffbd5b" opacity="0.58"/><circle cx="1346.0" cy="464.1" r="1.4" fill="#ffbd5b" opacity="0.28"/><circle cx="60.9" cy="608.8" r="2" fill="#ffbd5b" opacity="0.47"/><circle cx="1405.8" cy="281.5" r="1" fill="#ffbd5b" opacity="0.47"/><circle cx="64.5" cy="144.8" r="1.4" fill="#ffbd5b" opacity="0.25"/><circle cx="1313.0" cy="367.0" r="2" fill="#ffbd5b" opacity="0.61"/><circle cx="194.6" cy="424.9" r="2" fill="#ffbd5b" opacity="0.19"/><circle cx="1417.8" cy="154.2" r="1.4" fill="#ffbd5b" opacity="0.62"/><circle cx="152.2" cy="309.5" r="1.4" fill="#ffbd5b" opacity="0.50"/><circle cx="1390.6" cy="792.2" r="1.4" fill="#ffbd5b" opacity="0.17"/><circle cx="66.5" cy="233.8" r="1.4" fill="#ffbd5b" opacity="0.65"/><circle cx="1231.6" cy="358.8" r="2" fill="#ffbd5b" opacity="0.26"/><circle cx="20.2" cy="529.8" r="0.7" fill="#ffbd5b" opacity="0.63"/><circle cx="1236.0" cy="448.4" r="0.7" fill="#ffbd5b" opacity="0.41"/><circle cx="105.9" cy="789.7" r="0.7" fill="#ffbd5b" opacity="0.43"/><circle cx="1333.8" cy="353.6" r="1" fill="#ffbd5b" opacity="0.19"/><circle cx="175.7" cy="312.4" r="0.7" fill="#ffbd5b" opacity="0.33"/><circle cx="1223.3" cy="93.5" r="0.7" fill="#ffbd5b" opacity="0.19"/><circle cx="35.9" cy="256.1" r="2" fill="#ffbd5b" opacity="0.61"/></g>
+        <path d="M0 800H1440V900H0Z" fill="url(#review-floor)"/>
+        <path d="M0 830 Q720 808 1440 830 M0 862 Q720 843 1440 862" fill="none" stroke="url(#review-edge)" stroke-width="1.4" opacity=".7"/>
+        <path d="M0 887H1440" stroke="url(#review-edge)" stroke-width="2.4"/>
+      </svg>
+      <svg class="scenery-curtain scenery-curtain-left" viewBox="0 0 260 900" preserveAspectRatio="none" focusable="false">
+      <defs>
+        <linearGradient id="review-l-velvet" x1="0" y1="0" x2="1" y2=".3"><stop stop-color="#1b0203"/><stop offset=".16" stop-color="#54070a"/><stop offset=".31" stop-color="#8c1317"/><stop offset=".47" stop-color="#2d0305"/><stop offset=".62" stop-color="#660c0e"/><stop offset=".8" stop-color="#a1211b"/><stop offset="1" stop-color="#310304"/></linearGradient>
+        <linearGradient id="review-l-fold" x1="0" y1="0" x2="1" y2=".1"><stop stop-color="#1b0102" stop-opacity=".75"/><stop offset=".42" stop-color="#c12c20" stop-opacity=".66"/><stop offset="1" stop-color="#260204" stop-opacity=".72"/></linearGradient>
+        <linearGradient id="review-l-trim" x1="0" y1="0" x2="0.4" y2="1"><stop stop-color="#ffecb4"/><stop offset=".22" stop-color="#d89438"/><stop offset=".54" stop-color="#7d350e"/><stop offset=".82" stop-color="#f5ad44"/><stop offset="1" stop-color="#69210b"/></linearGradient>
+      </defs>
+      <path d="M0 0 H250 C219 136 175 270 121 404 C84 497 34 569 0 627 Z" fill="url(#review-l-velvet)"/>
+      <path d="M0 0 H55 C42 221 27 375 0 440 Z M72 0 H117 C90 233 47 414 0 515 L0 466 C36 350 62 168 72 0Z M145 0H187 C149 243 86 434 0 580 L0 548 C61 417 115 195 145 0Z M202 0H238 C199 220 122 421 36 570 C131 350 167 184 202 0Z" fill="url(#review-l-fold)" opacity=".78"/>
+      <path d="M248 0 C217 136 173 270 119 404 C82 497 34 569 0 625" fill="none" stroke="url(#review-l-trim)" stroke-width="3.5"/>
+      <path d="M228 0 C198 157 146 323 82 469" fill="none" stroke="#eaa04a" stroke-width="1" opacity=".36"/>
+      <path d="M0 575 C25 550 37 590 31 690 L42 900 H0Z" fill="url(#review-l-velvet)" opacity=".95"/>
+    </svg>
+      <svg class="scenery-curtain scenery-curtain-right" viewBox="0 0 260 900" preserveAspectRatio="none" focusable="false">
+      <defs>
+        <linearGradient id="review-r-velvet" x1="0" y1="0" x2="1" y2=".3"><stop stop-color="#1b0203"/><stop offset=".16" stop-color="#54070a"/><stop offset=".31" stop-color="#8c1317"/><stop offset=".47" stop-color="#2d0305"/><stop offset=".62" stop-color="#660c0e"/><stop offset=".8" stop-color="#a1211b"/><stop offset="1" stop-color="#310304"/></linearGradient>
+        <linearGradient id="review-r-fold" x1="0" y1="0" x2="1" y2=".1"><stop stop-color="#1b0102" stop-opacity=".75"/><stop offset=".42" stop-color="#c12c20" stop-opacity=".66"/><stop offset="1" stop-color="#260204" stop-opacity=".72"/></linearGradient>
+        <linearGradient id="review-r-trim" x1="0" y1="0" x2="0.4" y2="1"><stop stop-color="#ffecb4"/><stop offset=".22" stop-color="#d89438"/><stop offset=".54" stop-color="#7d350e"/><stop offset=".82" stop-color="#f5ad44"/><stop offset="1" stop-color="#69210b"/></linearGradient>
+      </defs>
+      <path d="M0 0 H250 C219 136 175 270 121 404 C84 497 34 569 0 627 Z" fill="url(#review-r-velvet)"/>
+      <path d="M0 0 H55 C42 221 27 375 0 440 Z M72 0 H117 C90 233 47 414 0 515 L0 466 C36 350 62 168 72 0Z M145 0H187 C149 243 86 434 0 580 L0 548 C61 417 115 195 145 0Z M202 0H238 C199 220 122 421 36 570 C131 350 167 184 202 0Z" fill="url(#review-r-fold)" opacity=".78"/>
+      <path d="M248 0 C217 136 173 270 119 404 C82 497 34 569 0 625" fill="none" stroke="url(#review-r-trim)" stroke-width="3.5"/>
+      <path d="M228 0 C198 157 146 323 82 469" fill="none" stroke="#eaa04a" stroke-width="1" opacity=".36"/>
+      <path d="M0 575 C25 550 37 590 31 690 L42 900 H0Z" fill="url(#review-r-velvet)" opacity=".95"/>
+    </svg>
+      <div class="scenery-pedestal scenery-pedestal-left"></div><div class="scenery-pedestal scenery-pedestal-right"></div>
+    </div>
+      <header class="vote-topbar"><a href="#" class="brand brand-vote" data-home aria-label="OituAwards - Início">OituAwards</a><div class="award-label"><span>MELHORES DO ANO</span><b aria-hidden="true">✦</b><i aria-hidden="true"></i></div></header>
+      <div id="reviewScroll" class="screen-scroll">
+        <div id="reviewStage" class="review-stage">
+          <div class="category-heading review-heading">
+            <p class="category-kicker">O GRANDE MOMENTO</p>
+            <h1 id="reviewTitle" tabindex="-1">Seus votos</h1>
+            <div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div>
+            <p id="reviewSummary"></p>
+          </div>
+          <div id="reviewGrid" class="review-grid"></div>
+          <div class="review-actions">
+            <button id="confirmVotes" class="start-button" type="button"><span>Confirmar votos</span><span aria-hidden="true">✓</span></button>
+            <button id="editVotes" class="edit-votes" type="button">← Alterar voto</button>
+          </div>
+        </div>
+        <div id="receiptStage" class="receipt-stage" hidden>
+          <div class="receipt-seal" aria-hidden="true">✓</div>
+          <p class="category-kicker">OITUAWARDS</p>
+          <h1 id="receiptTitle" tabindex="-1">Votos confirmados!</h1>
+          <div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div>
+          <p id="receiptMessage"></p>
+          <button id="continueAwards" class="start-button" type="button"><span>Continuar com OituAwards</span><span aria-hidden="true">→</span></button>
+        </div>
+      </div>
+    </section>
+
+    <section id="quizScreen" class="screen screen-quiz" aria-label="Dinâmica secreta" aria-hidden="true">
+      <header class="vote-topbar quiz-topbar"><span class="brand brand-vote">OituAwards</span><div class="award-label"><span>DINÂMICA SECRETA</span><b aria-hidden="true">✦</b><i aria-hidden="true"></i></div></header>
+      <div id="quizScroll" class="screen-scroll quiz-scroll">
+        <div class="quiz-layout">
+          <div id="quizIntro" class="quiz-intro">
+            <div class="quiz-seal" aria-hidden="true"><span>✦</span><i></i></div>
+            <p class="category-kicker">UMA SURPRESA EXCLUSIVA</p>
+            <h1 id="quizIntroTitle" tabindex="-1">Dinâmica secreta</h1>
+            <div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div>
+            <p class="quiz-copy">A premiação ainda guarda um segredo. Preparamos uma dinâmica secreta especialmente para você. Responda às 15 perguntas escolhendo a alternativa que mais combina com você. O restante fica para depois!</p>
+            <button id="beginQuiz" type="button" class="start-button"><span>Iniciar perguntas</span><span aria-hidden="true">→</span></button>
+            <p class="quiz-note">15 perguntas · uma escolha por vez</p>
+          </div>
+          <div id="quizPlay" class="quiz-play" hidden>
+            <div class="quiz-progress"><span>DINÂMICA SECRETA</span><span id="quizCounter"></span></div>
+            <div class="quiz-track" role="progressbar" aria-label="Progresso das perguntas" aria-valuemin="0" aria-valuemax="15" aria-valuenow="0" id="quizTrack"><span id="quizFill"></span></div>
+            <div id="quizPanel" class="quiz-panel">
+              <div class="quiz-question-head"><p class="category-kicker" id="quizKicker"></p><h1 id="quizQuestion" tabindex="-1"></h1><div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div></div>
+              <fieldset id="quizOptions" class="quiz-options" aria-labelledby="quizQuestion"></fieldset>
+            </div>
+            <div class="quiz-actions"><button id="quizBack" type="button" class="stage-button">← Anterior</button><button id="quizNext" type="button" class="start-button" disabled><span>Próxima</span><span aria-hidden="true">→</span></button></div>
+            <p id="quizHint" class="quiz-note" aria-live="polite">Escolha uma alternativa para continuar.</p>
+          </div>
+          <div id="quizDone" class="quiz-intro quiz-done" hidden>
+            <div class="quiz-seal" aria-hidden="true"><span>✓</span><i></i></div><p class="category-kicker">MISSÃO CUMPRIDA</p>
+            <h1 id="quizDoneTitle" tabindex="-1">Segredo guardado!</h1>
+            <div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div>
+            <p id="quizDoneCopy" class="quiz-copy">Você concluiu a dinâmica secreta. A surpresa fica para depois.</p>
+            <button id="continueToLikely" class="start-button" type="button"><span>Continuar no OituAwards</span><span aria-hidden="true">→</span></button>
+          </div>
+        </div>
+      </div>
+      <div id="quizFlash" class="quiz-flash" aria-hidden="true"></div>
+    </section>
+
+    <section id="likelyScreen" class="screen screen-likely" aria-label="Quem é mais provável" aria-hidden="true">
+      <header class="vote-topbar quiz-topbar"><span class="brand brand-vote">OituAwards</span><div class="award-label"><span>ÚLTIMA DINÂMICA</span><b aria-hidden="true">✦</b><i aria-hidden="true"></i></div></header>
+      <div id="likelyScroll" class="screen-scroll likely-scroll">
+        <div class="likely-layout">
+          <div id="likelyPlay">
+            <div class="quiz-progress"><span>QUEM É MAIS PROVÁVEL</span><span id="likelyCounter"></span></div>
+            <div class="quiz-track" id="likelyTrack" role="progressbar" aria-label="Progresso da dinâmica" aria-valuemin="0" aria-valuemax="12" aria-valuenow="0"><span id="likelyFill"></span></div>
+            <div class="likely-heading"><p class="category-kicker">A ESCOLHA É SUA</p><h1 id="likelyQuestion" tabindex="-1"></h1><div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div></div>
+            <div id="likelyCast" class="likely-cast" role="group" aria-labelledby="likelyQuestion"></div>
+            <p id="likelyHint" class="quiz-note" aria-live="polite">Escolha um personagem.</p>
+            <div class="likely-actions"><button id="likelyNext" class="start-button" type="button" disabled><span>Próxima</span><span aria-hidden="true">→</span></button></div>
+          </div>
+          <div id="likelyDone" class="quiz-intro" hidden>
+            <div class="quiz-seal" aria-hidden="true"><span>✓</span><i></i></div><p class="category-kicker">OITUAWARDS</p><h1 id="likelyDoneTitle" tabindex="-1">Dinâmicas concluídas!</h1><div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div><p class="quiz-copy" id="likelyDoneCopy">Obrigado por participar. Até o grande momento!</p><button id="returnToPersonalHome" class="start-button" type="button"><span>Voltar ao início</span><span aria-hidden="true">→</span></button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="personalScreen" class="screen screen-personal" aria-label="Início — Seus votos" aria-hidden="true">
+      <header class="personal-topbar"><span class="brand brand-vote">OituAwards</span><span class="personal-top-note">✦ &nbsp; SUA PARTICIPAÇÃO</span></header>
+      <div class="personal-layout">
+        <div class="personal-portrait"><img id="personalAvatar" alt="" decoding="async"></div>
+        <div class="personal-panel">
+          <div class="personal-heading"><p class="category-kicker">SUAS ESCOLHAS</p><h1 id="personalTitle" tabindex="-1">Seus votos</h1><div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div></div>
+          <div class="personal-tabs" role="group" aria-label="Escolher dinâmica"><button type="button" data-personal-tab="ballot" aria-pressed="true">Premiação</button><button type="button" data-personal-tab="quiz" aria-pressed="false">Dinâmica secreta</button><button type="button" data-personal-tab="likely" aria-pressed="false">Quem é mais provável</button></div>
+          <div class="personal-summary"><span id="personalCount" aria-live="polite"></span><span>Somente suas escolhas</span></div>
+          <div class="personal-list" id="personalList" tabindex="0" role="region" aria-label="Respostas da dinâmica selecionada"></div>
+          <div class="personal-footer personal-controls"><button id="personalHome" class="personal-small-action" type="button">← Início</button><button id="deleteParticipation" class="personal-small-action personal-delete" type="button" hidden>Excluir respostas</button></div>
+        </div>
+      </div>
+    </section>
+    <section id="resultsScreen" class="screen screen-results" aria-label="Resultados do OituAwards" aria-hidden="true">
+      <header class="vote-topbar results-topbar"><span class="brand brand-vote">OituAwards</span><button id="closeResults" class="results-back" type="button">← Categorias</button></header>
+      <div id="resultsScroll" class="screen-scroll results-scroll">
+        <div class="results-layout">
+          <div class="category-heading results-heading"><p class="category-kicker">APURAÇÃO RESERVADA</p><h1 id="resultsTitle" tabindex="-1">Resultados</h1><div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div><p>As escolhas que marcaram o OituAwards.</p></div>
+          <div class="results-stats" id="resultsStats"></div>
+          <div class="results-toolbar"><div class="personal-tabs results-tabs" role="group" aria-label="Escolher dinâmica"><button type="button" data-results-tab="ballot" aria-pressed="true">Premiação</button><button type="button" data-results-tab="quiz" aria-pressed="false">Dinâmica secreta</button><button type="button" data-results-tab="likely" aria-pressed="false">Quem é mais provável</button></div><button id="refreshResults" class="results-refresh" type="button" aria-label="Atualizar resultados">↻ Atualizar</button></div>
+          <p class="results-note" id="resultsNote" aria-live="polite"></p>
+          <div id="resultsContent" class="results-content"></div>
+          <p class="results-disclaimer">Apuração local · somente registros salvos neste navegador.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="identityModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="identityTitle">
+      <span class="sparkle sparkle-1" aria-hidden="true">✦</span>
+      <span class="sparkle sparkle-2" aria-hidden="true">✧</span>
+      <span class="sparkle sparkle-3" aria-hidden="true">✦</span>
+      <span class="modal-kicker">OITUAWARDS</span>
+      <h1 id="identityTitle">Quem é você?</h1>
+      <p class="modal-copy">Selecione seu nome para continuar para a votação.</p>
+
+      <div class="custom-select" id="voterSelect">
+        <span class="select-label" id="voterLabel">Nome</span>
+        <button id="voterSelectButton" class="select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="voterLabel voterSelectText">
+          <span id="voterSelectText">Selecione uma opção</span>
+          <span class="select-chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div class="select-popover" id="voterPopover">
+          <div class="select-options" id="voterOptions" role="listbox" aria-label="Selecione seu nome"></div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="cancelIdentity" class="button-secondary" type="button">Cancelar</button>
+        <button id="confirmIdentity" class="button-primary" type="button" disabled>Confirmar</button>
+      </div>
+    </section>
+  </div>
+
+
+
+  <div id="runnerScene" class="runner-scene" aria-hidden="true">
+    <div id="runnerShadow" class="runner-shadow" aria-hidden="true"></div>
+    <div id="runnerFigure" class="runner-figure" aria-hidden="true">
+      <img id="runnerRunImage" class="runner-frame runner-run" src="" alt="" />
+      <img id="runnerStandImage" class="runner-frame runner-stand" src="" alt="" />
+    </div>
+  </div>
+
+  <div id="pageTransition" class="page-transition" aria-hidden="true">
+    <div class="transition-panel transition-left"></div>
+    <div class="transition-panel transition-right"></div>
+    <div class="transition-mark"><span>OituAwards</span><i>✦</i></div>
+  </div>
+
+  <!-- Abertura exclusiva da revisão final. -->
+  <div id="reviewPremiere" class="review-premiere" aria-hidden="true">
+    <div class="premiere-panel premiere-panel-left"></div>
+    <div class="premiere-panel premiere-panel-right"></div>
+    <div class="premiere-light" ></div>
+    <div class="premiere-particles" id="premiereParticles"></div>
+    <div class="premiere-content">
+      <div class="premiere-seal">
+        <div class="premiere-orbit orbit-outer"></div><div class="premiere-orbit orbit-inner"></div>
+        <svg class="premiere-emblem" viewBox="0 0 160 160" fill="none" aria-hidden="true">
+          <defs><linearGradient id="premiereGold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a96729"/><stop offset=".3" stop-color="#fff0bc"/><stop offset=".57" stop-color="#d7a152"/><stop offset=".82" stop-color="#ffe1a0"/><stop offset="1" stop-color="#a56a2b"/></linearGradient></defs>
+          <circle cx="80" cy="80" r="74" stroke="url(#premiereGold)" stroke-width="1.6" stroke-dasharray="2 4"/>
+          <circle cx="80" cy="80" r="64" stroke="url(#premiereGold)" stroke-width="1.4"/>
+          <path d="M80 22 L138 80 80 138 22 80Z" stroke="url(#premiereGold)" stroke-width=".85" opacity=".65"/>
+          <path d="M80 35 Q83 74 125 80 Q83 86 80 125 Q77 86 35 80 Q77 74 80 35Z" fill="url(#premiereGold)"/>
+          <path d="M80 52 L80 108 M52 80H108" stroke="#fff5d8" stroke-width="1.2" opacity=".8"/>
+          <circle cx="80" cy="80" r="4" fill="#fff7db"/>
+        </svg>
+      </div>
+      <p class="premiere-brand">OituAwards</p>
+      <div class="premiere-divider"><span></span><i>✦</i><span></span></div>
+      <p class="premiere-kicker">O GRANDE MOMENTO</p>
+      <p class="premiere-headline">Suas escolhas.<br><em>Seu veredito.</em></p>
+    </div>
+    <div class="premiere-opening"></div>
+  </div>
+
+  <div id="categorySweep" class="category-sweep" aria-hidden="true"></div>
+  <div id="urnScene" class="urn-scene" aria-hidden="true">
+    <div id="urn" class="urn">
+      <div class="urn-lid"><div id="urnSlot" class="urn-slot"></div></div>
+      <div class="urn-body"><span class="urn-ornament">✦</span><span class="urn-brand">OituAwards</span><span class="urn-label">VOTAÇÃO</span></div>
+      <div class="urn-base"></div>
+    </div>
+    <div id="flightLayer" class="flight-layer"></div>
+  </div>
+  <dialog id="pendingDialog" class="pending-dialog" aria-labelledby="pendingTitle" aria-describedby="pendingCopy">
+    <div class="pending-shell">
+      <div class="pending-emblem" aria-hidden="true"><span>✦</span></div>
+      <p class="category-kicker">QUASE LÁ</p>
+      <h2 id="pendingTitle" tabindex="-1">Faltam alguns votos!</h2>
+      <p id="pendingCopy"></p>
+      <div class="pending-progress" aria-hidden="true"><span id="pendingProgress"></span></div>
+      <ul id="pendingList" class="pending-list" aria-label="Categorias sem voto"></ul>
+      <button id="pendingFirst" class="button-primary pending-first" type="button">Ir para a primeira pendência <span aria-hidden="true">→</span></button>
+      <button id="pendingClose" class="edit-votes pending-close" type="button">Voltar à votação</button>
+    </div>
+  </dialog>
+  <dialog id="resultsPasswordDialog" class="pending-dialog results-password" aria-labelledby="resultsPasswordTitle">
+    <form id="resultsPasswordForm" class="pending-shell" novalidate>
+      <div class="pending-emblem" aria-hidden="true"><span>✦</span></div><p class="category-kicker">ACESSO RESERVADO</p><h2 id="resultsPasswordTitle">Resultados</h2>
+      <p class="results-password-copy">Informe a senha para acessar a apuração.</p>
+      <label class="results-password-label" for="resultsPassword">Senha</label><input id="resultsPassword" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+      <p id="resultsPasswordError" class="results-password-error" role="alert"></p>
+      <button class="button-primary pending-first" type="submit">Acessar resultados <span aria-hidden="true">→</span></button>
+      <button id="cancelResultsPassword" class="edit-votes pending-close" type="button">Voltar</button>
+    </form>
+  </dialog>
+  <dialog id="deleteParticipationDialog" class="pending-dialog results-password delete-password" aria-labelledby="deleteParticipationTitle" aria-describedby="deleteParticipationCopy">
+    <form id="deleteParticipationForm" class="pending-shell" novalidate>
+      <div class="pending-emblem" aria-hidden="true"><span>↺</span></div><p class="category-kicker">ACESSO RESERVADO</p><h2 id="deleteParticipationTitle">Excluir respostas?</h2>
+      <p id="deleteParticipationCopy" class="results-password-copy">Todas as respostas deste participante nas três dinâmicas serão excluídas da apuração. Só então será possível votar novamente. Esta ação não pode ser desfeita.</p>
+      <p id="deleteParticipationName" class="delete-participant-name"></p>
+      <label class="results-password-label" for="deleteParticipationPassword">Senha</label><input id="deleteParticipationPassword" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+      <p id="deleteParticipationError" class="results-password-error" role="alert"></p>
+      <button class="button-primary pending-first" type="submit">Excluir e votar novamente <span aria-hidden="true">→</span></button>
+      <button id="cancelDeleteParticipation" class="edit-votes pending-close" type="button">Cancelar</button>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
