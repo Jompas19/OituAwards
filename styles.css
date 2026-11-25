@@ -1584,3 +1584,9 @@ html, body {
   .nominee-grid.is-photo-category .nominee-card { aspect-ratio:auto; min-height:0; padding:12px 12px 16px; }
   .nominee-grid.is-photo-category .nominee-photo { width:100%; max-height: min(48vh,340px); aspect-ratio:3/4; }
 }
+
+/* Equalize Juliana's wider transparent canvas with the other stage avatars. */
+.likely-person img[src$="stage-juliana.webp"] {
+  max-width: 199%;
+  flex-shrink: 0;
+}
