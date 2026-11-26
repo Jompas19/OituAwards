@@ -813,9 +813,12 @@ document.addEventListener('click', (event) => {
 
 cancelIdentity.addEventListener('click', () => closeModal());
 
-confirmIdentity.addEventListener('click', () => {
-  if (!selectedVoter || confirmIdentity.disabled || transitionLocked || resumeDialog.open) return;
+confirmIdentity.addEventListener('click', async () => {
+  if (!selectedVoter || confirmIdentity.disabled || transitionLocked || resumeDialog.open || cloudSyncBusy) return;
+  cloudSyncBusy=true;const voter=selectedVoter;voterSelectButton.disabled=true;cancelIdentity.disabled=true;confirmIdentity.disabled=true;
   try {
+    await oaLogin(voter);
+    if(voter!==selectedVoter || !identityModal.classList.contains('is-open'))return;
     const participation = readParticipation(selectedVoter);
     const kind = participationKinds.find(k => !participation.records[k]);
     if (!kind) { resetParticipation(); preparePersonal(participation.records); enterParticipation('personal'); return; }
@@ -835,7 +838,8 @@ confirmIdentity.addEventListener('click', () => {
       return;
     }
     beginParticipation(participation, kind, draft);
-  } catch (_) { showToast('Não foi possível consultar as respostas salvas. Habilite o armazenamento do navegador.'); }
+  } catch (e) { showToast(oaMessage(e)); }
+  finally {cloudSyncBusy=false;if(!transitionLocked&&!runnerExiting){voterSelectButton.disabled=false;cancelIdentity.disabled=false;confirmIdentity.disabled=false;}}
 });
 
 function enterParticipation(destination) {
@@ -996,10 +1000,10 @@ async function elegantTransition(target) {
   } finally { pageTransition.classList.remove('is-reviewing'); transitionLocked = false; }
 }
 
-function persistBallot() {
+async function persistBallot() {
   const ballot = { voter:selectedVoter, confirmedAt:new Date().toISOString(), votes:CATEGORIES.map((category,i)=>({category:category.title, nominee:category.nominees[categorySelections[i]]?.name ?? null, nomineeIndex:categorySelections[i]})) };
-  try { localStorage.setItem(participationKey('ballot', selectedVoter), JSON.stringify(ballot)); }
-  catch (_) { return false; }
+  if(!await oaSubmit('ballot',ballot))return false;
+  try { localStorage.setItem(participationKey('ballot', selectedVoter), JSON.stringify(ballot)); } catch (_) {}
   personalRecords.ballot = ballot; clearStageDraft('ballot', selectedVoter); return true;
 }
 
@@ -1029,7 +1033,7 @@ async function depositBallot() {
   if (preventRepeatStage('ballot')) return;
   transitionLocked = true;
   confirmVotes.disabled = editVotes.disabled = true;
-  const saved = persistBallot();
+  const saved = await persistBallot();
   if (!saved) { transitionLocked=false; confirmVotes.disabled=editVotes.disabled=false; showToast('Não foi possível confirmar os votos. Tente novamente.'); return; }
   const cards = [...reviewGrid.querySelectorAll('[data-voted]')];
   let presentedReceipt = false;
@@ -1040,7 +1044,7 @@ async function depositBallot() {
     reviewScreen.querySelector('[data-home]').setAttribute('tabindex','-1');
     reviewScreen.querySelector('[data-home]').setAttribute('aria-disabled','true');
     document.getElementById('receiptTitle').textContent = saved ? 'Votos confirmados!' : 'Votação concluída';
-    document.getElementById('receiptMessage').textContent = saved ? 'Suas escolhas foram salvas neste dispositivo. Obrigado por participar!' : 'Não foi possível salvar suas escolhas neste dispositivo. A votação ainda não está conectada a um servidor.';
+    document.getElementById('receiptMessage').textContent = saved ? 'Suas escolhas foram confirmadas no banco central. Obrigado por participar!' : 'Não foi possível confirmar suas escolhas no banco central.';
     presentedReceipt = true;
 
   };
@@ -1538,18 +1542,19 @@ async function moveQuiz(target) {
     if (!reducedMotion()) await wait(390);
   } finally { quizBusy = false; quizOptions.disabled = false; updateQuizControls(); quizQuestion.focus({preventScroll:true}); }
 }
-function storeQuiz() {
+async function storeQuiz() {
   const scores = {Tiago:0,Osvaldo:0,Marcelo:0,Mauri:0};
   const answers = QUIZ_QUESTIONS.map((q,i) => { const option = q.options[quizAnswers[i]]; scores[option.profile]++; return {question:i+1, option:'ABCD'[quizAnswers[i]], text:option.text}; });
   const record = {voter:selectedVoter, completedAt:new Date().toISOString(), answers, scores};
-  try { localStorage.setItem(participationKey('quiz', selectedVoter),JSON.stringify(record)); } catch (_) { return false; }
+  if(!await oaSubmit('quiz',record))return false;
+  try { localStorage.setItem(participationKey('quiz', selectedVoter),JSON.stringify(record)); } catch (_) {}
   personalRecords.quiz = record; clearStageDraft('quiz', selectedVoter); return true;
 }
 async function finishQuiz() {
   if (quizBusy || transitionLocked || quizAnswers.some((a,i)=>!Number.isInteger(a)||!QUIZ_QUESTIONS[i].options[a])) return;
   if (preventRepeatStage('quiz')) return;
   quizBusy = true; quizOptions.disabled = true; updateQuizControls();
-  const saved = storeQuiz();
+  const saved = await storeQuiz();
   if (!saved) { quizBusy=false; quizOptions.disabled=false; updateQuizControls(); showToast('Não foi possível confirmar as respostas. Tente novamente.'); return; }
   if (!reducedMotion()) {
     quizFlash.classList.remove('is-sweeping'); void quizFlash.offsetWidth; quizFlash.classList.add('is-sweeping');
@@ -1664,7 +1669,7 @@ async function advanceLikely(direction=1) {
       if (likelyAnswers.some(a=>!Number.isInteger(a)||!VOTERS[a])) return;
       if (preventRepeatStage('likely')) return;
       const record={voter:selectedVoter, completedAt:new Date().toISOString(), answers:LIKELY_QUESTIONS.map((question,i)=>({question,person:VOTERS[likelyAnswers[i]]}))};
-      let saved=true; try {localStorage.setItem(participationKey('likely', selectedVoter),JSON.stringify(record));} catch (_) {saved=false;}
+      const saved=await oaSubmit('likely',record); if(saved){try {localStorage.setItem(participationKey('likely', selectedVoter),JSON.stringify(record));} catch (_) {}}
       if (!saved) { showToast('Não foi possível confirmar as respostas. Tente novamente.'); return; }
       personalRecords.likely = record; clearStageDraft('likely', selectedVoter);
       if (!reducedMotion()) await likelyPlay.animate([{opacity:1},{opacity:0}],{duration:300,easing:'ease-in'}).finished;
@@ -1780,7 +1785,7 @@ function normalizeBallotRecord(record) {
 
 function readResultsRecord(kind,voter) {
   try {
-    const record = JSON.parse(localStorage.getItem('oituawards_'+kind+':'+voter));
+    const record = cloudResultRows.find(row=>row.kind===kind&&row.voter===voter)?.payload;
     return completedRecord(kind, record, voter) ? (kind==='ballot'?normalizeBallotRecord(record):record) : null;
   } catch (_) { return null; }
 }
@@ -1851,7 +1856,8 @@ function renderResults(kind,animate=true) {
   resultsContent.replaceChildren();
   const note=document.getElementById('resultsNote');
   note.textContent=kind==='quiz'?'Percentual sobre todas as respostas válidas da dinâmica. Abaixo, a pontuação individual de cada participante.':'Percentual calculado sobre os votos válidos de cada categoria, em ordem decrescente.';
-  if(!data.counts[kind]){resultsContent.append(resultElement('p','results-empty','Ainda não há respostas registradas nesta dinâmica neste navegador.'));}
+  if(cloudConflicts)note.textContent+=' Há '+cloudConflicts+' registro(s) de migração divergente(s) preservado(s) para revisão no banco.';
+  if(!data.counts[kind]){resultsContent.append(resultElement('p','results-empty','Ainda não há respostas confirmadas nesta dinâmica no banco central.'));}
   if(kind==='ballot')CATEGORIES.forEach((c,i)=>resultsContent.append(resultGroup(c.title,data.ballot[i],kind,i)));
   if(kind==='likely')LIKELY_QUESTIONS.forEach((q,i)=>resultsContent.append(resultGroup(q+'?',data.likely[i],kind,i)));
   if(kind==='quiz'){
@@ -1867,18 +1873,22 @@ document.getElementById('openResults').addEventListener('click',()=>{
 resultsPasswordInput.addEventListener('input',()=>{resultsPasswordError.textContent='';resultsPasswordInput.removeAttribute('aria-invalid');});
 document.getElementById('cancelResultsPassword').addEventListener('click',()=>resultsPasswordDialog.close());
 resultsPasswordDialog.addEventListener('close',()=>{resultsPasswordInput.value='';resultsPasswordError.textContent='';});
-document.getElementById('resultsPasswordForm').addEventListener('submit',event=>{
+document.getElementById('resultsPasswordForm').addEventListener('submit',async event=>{
   event.preventDefault();
   if(!resultsPasswordDialog.open || transitionLocked || !categoriesScreen.classList.contains('is-active'))return;
-  if(resultsPasswordInput.value!=='oituawardsdosdivos@'){
-    resultsPasswordError.textContent='Senha incorreta. Tente novamente.';resultsPasswordInput.setAttribute('aria-invalid','true');resultsPasswordInput.select();return;
-  }
+  if(cloudSyncBusy)return;
+  cloudSyncBusy=true;
+  const password=resultsPasswordInput.value;
+  try {await oaMigrateAll();await oaLoadResults(password);}
+  catch(e){resultsPasswordError.textContent=oaMessage(e);resultsPasswordInput.setAttribute('aria-invalid','true');return;}
+  finally{cloudSyncBusy=false;}
+  if(!resultsPasswordDialog.open)return;
   resultsPasswordDialog.close();resultsUnlocked=true;renderResults('ballot',false);transitionTo('results');
   setTimeout(()=>document.getElementById('resultsTitle').focus({preventScroll:true}),reducedMotion()?0:1120);
 });
 document.getElementById('closeResults').addEventListener('click',()=>{if(!transitionLocked&&resultsUnlocked)transitionTo('categories');});
 resultsTabs.forEach(btn=>btn.addEventListener('click',()=>{if(!transitionLocked&&resultsUnlocked)renderResults(btn.dataset.resultsTab);}));
-document.getElementById('refreshResults').addEventListener('click',()=>{if(!transitionLocked&&resultsUnlocked)renderResults(activeResultsTab);});
+document.getElementById('refreshResults').addEventListener('click',async()=>{if(!transitionLocked&&resultsUnlocked&&!cloudSyncBusy){cloudSyncBusy=true;try{await oaMigrateAll();await oaLoadResults(cloudAdmin);renderResults(activeResultsTab);}catch(e){showToast(oaMessage(e));}finally{cloudSyncBusy=false;}}});
 window.addEventListener('storage',event=>{if(resultsUnlocked&&document.getElementById('resultsScreen').classList.contains('is-active')&&(!event.key||event.key.startsWith('oituawards_')))renderResults(activeResultsTab,false);});
 
 
@@ -1972,11 +1982,122 @@ function saveStageDraft(kind,review=false,intro=false) {
       localStorage.removeItem(draftKey(kind,selectedVoter));
       // A recovered, subsequently cleared legacy partial record must not reappear.
       if(existing?.voter===selectedVoter) localStorage.removeItem(participationKey(kind,selectedVoter));
-      return;
+      oaQueueDraft(kind,null);return;
     }
     localStorage.setItem(draftKey(kind,selectedVoter),JSON.stringify(draft));
+    oaQueueDraft(kind,draft);
   } catch (_) { showToast('Não foi possível salvar o progresso neste dispositivo.'); }
 }
+
+/* Central data transport. Only publishable credentials are present in this file. */
+const OA_ENDPOINT='https://cfmpplysjbupsncdsyxp.supabase.co/functions/v1/oituawards';
+const OA_PUBLIC='sb_publishable_XuQb6ECsDM_1St4o20iI6Q_fGFayxa9';
+let cloudVoter='', cloudToken='', cloudEpoch=0, cloudAdmin='', cloudResultRows=[], cloudConflicts=0, cloudQueue=Promise.resolve(), cloudSyncBusy=false;
+const oaTokenKey=v=>'oituawards_access:'+v;
+const oaEpochKey=v=>'oituawards_epoch:'+v;
+const oaMigrationKey=(v,k)=>'oituawards_migrated:'+v+':'+k;
+const oaNewToken=()=>crypto.randomUUID().replaceAll('-','');
+function oaGetToken(v){return localStorage.getItem(oaTokenKey(v));}
+async function oaRequest(body,keepalive=false){
+ const controller=new AbortController(); const timeout=setTimeout(()=>controller.abort(),12000);
+ try {
+  const res=await fetch(OA_ENDPOINT,{method:'POST',headers:{apikey:OA_PUBLIC,'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal,keepalive});
+  const value=await res.json();
+  if(!res.ok||value.error)throw Object.assign(new Error(value.error||'unavailable'),{code:value.error||'unavailable'});
+  return value;
+ }finally{clearTimeout(timeout);}
+}
+function oaContext(action,extra={}){return {action,voter:cloudVoter,token:cloudToken,epoch:cloudEpoch,...extra};}
+function oaMessage(e){return e?.code==='password'?'Senha administrativa incorreta.':e?.code==='access'?'Informe o código de recuperação do participante.':e?.code==='completed'?'Esta etapa já foi confirmada em outro dispositivo. Entre novamente para atualizar.':e?.code==='stale'?'A participação foi reiniciada em outro dispositivo. Entre novamente.':'Não foi possível conectar ao banco central. Confira a internet e tente novamente.';}
+function oaLocalRecords(v){
+ const records=[];
+ for(const k of participationKinds){
+  let r=null;try{r=JSON.parse(localStorage.getItem(participationKey(k,v)));}catch(_){}
+  if(completedRecord(k,r,v)){records.push({kind:k,payload:r,completed:true});continue;}
+  const d=readStageDraft(k,v);if(d)records.push({kind:k,payload:d,completed:false});
+ }
+ return records;
+}
+async function oaMigrateVoter(v){
+ const records=oaLocalRecords(v);if(!records.length)return;
+ // Local backups remain untouched, and each original payload is sent at most once after acknowledgement.
+ let token=oaGetToken(v);if(!token){token=oaNewToken();localStorage.setItem(oaTokenKey(v),token);}
+ for(const rec of records){
+  const fingerprint=JSON.stringify(rec.payload);
+  const key=oaMigrationKey(v,rec.kind);
+  if(localStorage.getItem(key)===fingerprint)continue;
+  const out=await oaRequest({action:'migrate',voter:v,token,...rec});
+  if(['imported','already','conflict','reset_ignored'].includes(out.status))localStorage.setItem(key,fingerprint);
+ }
+}
+async function oaMigrateAll(){
+ let failures=0;
+ for(const v of VOTERS){try{await oaMigrateVoter(v);}catch(_){failures++;}}
+ if(failures)showToast('Há respostas locais aguardando sincronização. Reabra o site com internet.');
+ return failures;
+}
+function oaBackupLocal(v){
+ for(const k of participationKinds){
+  for(const key of [participationKey(k,v),draftKey(k,v)]){
+   const raw=localStorage.getItem(key);
+   if(raw!==null)localStorage.setItem('oituawards_backup:'+key+':'+Date.now(),raw);
+  }
+ }
+}
+function oaApplyRemote(v,remote){
+ oaBackupLocal(v);
+ for(const k of participationKinds){localStorage.removeItem(participationKey(k,v));localStorage.removeItem(draftKey(k,v));}
+ for(const row of remote.rows||[]){
+  if(!participationKinds.includes(row.kind)||row.payload?.voter!==v)continue;
+  const key=row.completed?participationKey(row.kind,v):draftKey(row.kind,v);
+  const fingerprint=JSON.stringify(row.payload);localStorage.setItem(key,fingerprint);localStorage.setItem(oaMigrationKey(v,row.kind),fingerprint);
+ }
+ localStorage.setItem(oaEpochKey(v),String(remote.epoch));
+}
+async function oaLogin(v){
+ await oaMigrateVoter(v);
+ let token=oaGetToken(v)||oaNewToken(),remote;
+ try{remote=await oaRequest({action:'login',voter:v,token});}
+ catch(e){
+  if(e.code!=='access')throw e;
+  const entered=prompt('Este personagem já possui uma participação vinculada. Informe o código de recuperação exibido no navegador original.');
+  if(!entered||!/^[a-f0-9]{32}$/i.test(entered.trim()))throw e;
+  token=entered.trim().toLowerCase();remote=await oaRequest({action:'login',voter:v,token});
+ }
+ localStorage.setItem(oaTokenKey(v),token);oaApplyRemote(v,remote);
+ cloudVoter=v;cloudToken=token;cloudEpoch=remote.epoch;
+ if(remote.claimed)showToast('Seu código de recuperação está disponível no menu da votação.');
+}
+function oaQueueDraft(kind,payload){
+ if(cloudVoter!==selectedVoter||!cloudToken)return;
+ const ctx=oaContext('draft',{kind,payload});
+ cloudQueue=cloudQueue.catch(()=>{}).then(async()=>{
+  try{
+   await oaRequest(ctx,true);
+   if(payload)localStorage.setItem(oaMigrationKey(ctx.voter,kind),JSON.stringify(payload));
+  }catch(e){showToast(oaMessage(e)+' O rascunho permanece neste navegador.');}
+ });
+}
+async function oaSubmit(kind,record){
+ if(cloudVoter!==record.voter||!cloudToken)return false;
+ try{
+  await cloudQueue;
+  await oaRequest(oaContext('submit',{kind,payload:record}));
+  const raw=JSON.stringify(record);
+  localStorage.setItem(oaMigrationKey(record.voter,kind),raw);
+  return true;
+ }catch(e){showToast(oaMessage(e));return false;}
+}
+async function oaLoadResults(password){
+ const out=await oaRequest({action:'results',password});
+ cloudResultRows=out.rows||[];cloudConflicts=out.conflicts||0;cloudAdmin=password;
+}
+function oaShowCode(){
+ if(!cloudToken||cloudVoter!==selectedVoter)return;
+ prompt('Guarde este código em local seguro. Use-o para continuar em outro dispositivo. Não compartilhe com outros participantes.',cloudToken);
+}
+document.querySelectorAll('[data-recovery-code]').forEach(btn=>btn.addEventListener('click',oaShowCode));
+
 const resumeDialog=document.getElementById('resumeDialog');
 let resumeChoice=null;
 function beginParticipation(participation,kind,draft) {
@@ -2000,14 +2121,16 @@ function beginParticipation(participation,kind,draft) {
   }
   enterParticipation(destination);
 }
-function chooseResume(restart) {
-  if(!resumeDialog.open || !resumeChoice || transitionLocked || resumeChoice.voter!==selectedVoter) return;
+async function chooseResume(restart) {
+  if(!resumeDialog.open || !resumeChoice || transitionLocked || resumeChoice.voter!==selectedVoter || cloudSyncBusy) return;
+  cloudSyncBusy=true;
   try {
     const participation=readParticipation(selectedVoter);
     const kind=participationKinds.find(k=>!participation.records[k]);
     if(!kind || kind!==resumeChoice.kind) {resumeDialog.close();showToast('As respostas foram atualizadas. Selecione o participante novamente.');return;}
     const draft=readStageDraft(kind,selectedVoter);
     if(restart) {
+      await cloudQueue;await oaRequest(oaContext('restart_stage',{kind}));
       // Only remove the current unfinished stage; confirmed stages stay protected.
       localStorage.removeItem(draftKey(kind,selectedVoter));
       const key=participationKey(kind,selectedVoter);
@@ -2016,7 +2139,7 @@ function chooseResume(restart) {
     }
     resumeDialog.close();
     beginParticipation(participation,kind,restart?null:draft);
-  } catch (_) {showToast('Não foi possível acessar o progresso salvo. Tente novamente.');}
+  } catch (e) {showToast(oaMessage(e));} finally {cloudSyncBusy=false;}
 }
 document.getElementById('resumeContinue').addEventListener('click',()=>chooseResume(false));
 document.getElementById('resumeStartOver').addEventListener('click',()=>chooseResume(true));
@@ -2100,7 +2223,7 @@ document.getElementById('deleteParticipation').addEventListener('click',()=>{
 document.getElementById('cancelDeleteParticipation').addEventListener('click',()=>deleteDialog.close());
 deletePassword.addEventListener('input',()=>{deleteError.textContent='';deletePassword.removeAttribute('aria-invalid');});
 deleteDialog.addEventListener('close',()=>{deletePassword.value='';deleteError.textContent='';deletePassword.removeAttribute('aria-invalid');deletionVoter=null;});
-document.getElementById('deleteParticipationForm').addEventListener('submit',event=>{
+document.getElementById('deleteParticipationForm').addEventListener('submit',async event=>{
   event.preventDefault();
   if(!deleteDialog.open||transitionLocked||!deletionVoter||deletionVoter!==selectedVoter)return;
   const fromResume=deletionOrigin==='resume';
@@ -2112,7 +2235,9 @@ document.getElementById('deleteParticipationForm').addEventListener('submit',eve
     document.getElementById('deleteParticipationCopy').textContent='Há respostas confirmadas neste dispositivo. Para excluir toda a participação, informe a senha de exclusão.';
     deleteError.textContent='Os registros foram atualizados. Confirme com a senha.';deletePassword.focus();return;
   } } catch (_) {deleteError.textContent='Não foi possível verificar as respostas. Nenhum registro foi excluído.';return;}
-  if(deletionRequiresPassword && deletePassword.value!=='excluirrespostas@'){deleteError.textContent='Senha incorreta. Nenhuma resposta foi excluída.';deletePassword.setAttribute('aria-invalid','true');deletePassword.select();return;}
+  if(cloudSyncBusy)return;cloudSyncBusy=true;
+  try{await cloudQueue;const out=await oaRequest(oaContext('reset',{password:deletePassword.value}));cloudEpoch=out.epoch;localStorage.setItem(oaEpochKey(deletionVoter),String(out.epoch));}
+  catch(e){deleteError.textContent=oaMessage(e);return;}finally{cloudSyncBusy=false;}
   const keys=participationKinds.flatMap(kind=>[participationKey(kind,deletionVoter),draftKey(kind,deletionVoter)]);
   try {
     // The same keys are read by the results panel; no independent tally can retain old votes.
@@ -2177,6 +2302,8 @@ async function bootSite() {
     bootStatus.textContent = `${failures.length} imagens não carregaram. Confira sua conexão e tente novamente.`;
     bootRetry.hidden = false; bootRunning = false; return;
   }
+  bootStatus.textContent = 'Sincronizando respostas anteriores...';
+  await oaMigrateAll();
   bootStatus.textContent = 'Tudo pronto. Bem-vindo ao OituAwards!';
   // A tipografia externa também recebe uma oportunidade de carregar; se a
   // rede bloquear o serviço de fontes, as fontes locais de reserva funcionam.

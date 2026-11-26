@@ -150,7 +150,7 @@
         <div id="nomineeGrid" class="nominee-grid" role="radiogroup" aria-label="Indicados da categoria"></div>
 
         <div class="vote-navigation">
-          <button id="previousButton" class="stage-button" type="button"><span aria-hidden="true">←</span> ANTERIOR</button>
+          <button type="button" class="personal-small-action" data-recovery-code>Código de recuperação</button><button id="previousButton" class="stage-button" type="button"><span aria-hidden="true">←</span> ANTERIOR</button>
           <button id="nextButton" class="stage-button" type="button">PRÓXIMA <span aria-hidden="true">→</span></button>
         </div>
         <button id="pendingShortcut" class="pending-shortcut" type="button" hidden></button>
@@ -244,7 +244,7 @@
               <div class="quiz-question-head"><p class="category-kicker" id="quizKicker"></p><h1 id="quizQuestion" tabindex="-1"></h1><div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div></div>
               <fieldset id="quizOptions" class="quiz-options" aria-labelledby="quizQuestion"></fieldset>
             </div>
-            <div class="quiz-actions"><button id="quizBack" type="button" class="stage-button">← Anterior</button><button id="quizNext" type="button" class="start-button" disabled><span>Próxima</span><span aria-hidden="true">→</span></button></div>
+            <button type="button" class="personal-small-action" data-recovery-code>Código de recuperação</button><div class="quiz-actions"><button id="quizBack" type="button" class="stage-button">← Anterior</button><button id="quizNext" type="button" class="start-button" disabled><span>Próxima</span><span aria-hidden="true">→</span></button></div>
             <p id="quizHint" class="quiz-note" aria-live="polite">Escolha uma alternativa para continuar.</p>
           </div>
           <div id="quizDone" class="quiz-intro quiz-done" hidden>
@@ -269,7 +269,7 @@
             <div class="likely-heading"><p class="category-kicker">A ESCOLHA É SUA</p><h1 id="likelyQuestion" tabindex="-1"></h1><div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div></div>
             <div id="likelyCast" class="likely-cast" role="group" aria-labelledby="likelyQuestion"></div>
             <p id="likelyHint" class="quiz-note" aria-live="polite">Escolha um personagem.</p>
-            <div class="likely-actions"><button id="likelyBack" class="stage-button" type="button" disabled>← Anterior</button><button id="likelyNext" class="start-button" type="button" disabled><span>Próxima</span><span aria-hidden="true">→</span></button></div>
+            <button type="button" class="personal-small-action" data-recovery-code>Código de recuperação</button><div class="likely-actions"><button id="likelyBack" class="stage-button" type="button" disabled>← Anterior</button><button id="likelyNext" class="start-button" type="button" disabled><span>Próxima</span><span aria-hidden="true">→</span></button></div>
           </div>
           <div id="likelyDone" class="quiz-intro" hidden>
             <div class="quiz-seal" aria-hidden="true"><span>✓</span><i></i></div><p class="category-kicker">OITUAWARDS</p><h1 id="likelyDoneTitle" tabindex="-1">Dinâmicas concluídas!</h1><div class="mini-ornament" aria-hidden="true"><span></span><i>✦</i><span></span></div><p class="quiz-copy" id="likelyDoneCopy">Obrigado por participar. Até o grande momento!</p><button id="returnToPersonalHome" class="start-button" type="button"><span>Voltar ao início</span><span aria-hidden="true">→</span></button>
@@ -286,7 +286,7 @@
           <div class="personal-tabs" role="group" aria-label="Escolher dinâmica"><button type="button" data-personal-tab="ballot" aria-pressed="true">Premiação</button><button type="button" data-personal-tab="quiz" aria-pressed="false">Dinâmica secreta</button><button type="button" data-personal-tab="likely" aria-pressed="false">Quem é mais provável</button></div>
           <div class="personal-summary"><span id="personalCount" aria-live="polite"></span><span>Somente suas escolhas</span></div>
           <div class="personal-list" id="personalList" tabindex="0" role="region" aria-label="Respostas da dinâmica selecionada"></div>
-          <div class="personal-footer personal-controls"><button id="personalHome" class="personal-small-action" type="button">← Início</button><button id="deleteParticipation" class="personal-small-action personal-delete" type="button" hidden>Excluir respostas</button></div>
+          <div class="personal-footer personal-controls"><button type="button" class="personal-small-action" data-recovery-code>Código de recuperação</button><button id="personalHome" class="personal-small-action" type="button">← Início</button><button id="deleteParticipation" class="personal-small-action personal-delete" type="button" hidden>Excluir respostas</button></div>
         </div>
       </div>
     </section>
@@ -299,7 +299,7 @@
           <div class="results-toolbar"><div class="personal-tabs results-tabs" role="group" aria-label="Escolher dinâmica"><button type="button" data-results-tab="ballot" aria-pressed="true">Premiação</button><button type="button" data-results-tab="quiz" aria-pressed="false">Dinâmica secreta</button><button type="button" data-results-tab="likely" aria-pressed="false">Quem é mais provável</button></div><button id="refreshResults" class="results-refresh" type="button" aria-label="Atualizar resultados">↻ Atualizar</button></div>
           <p class="results-note" id="resultsNote" aria-live="polite"></p>
           <div id="resultsContent" class="results-content"></div>
-          <p class="results-disclaimer">Apuração local · somente registros salvos neste navegador.</p>
+          <p class="results-disclaimer">Apuração centralizada · respostas confirmadas de todos os dispositivos.</p>
         </div>
       </div>
     </section>
@@ -412,7 +412,7 @@
   <dialog id="resultsPasswordDialog" class="pending-dialog results-password" aria-labelledby="resultsPasswordTitle">
     <form id="resultsPasswordForm" class="pending-shell" novalidate>
       <div class="pending-emblem" aria-hidden="true"><span>✦</span></div><p class="category-kicker">ACESSO RESERVADO</p><h2 id="resultsPasswordTitle">Resultados</h2>
-      <p class="results-password-copy">Informe a senha para acessar a apuração.</p>
+      <p class="results-password-copy">Informe a senha administrativa para acessar a apuração central.</p>
       <label class="results-password-label" for="resultsPassword">Senha</label><input id="resultsPassword" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required>
       <p id="resultsPasswordError" class="results-password-error" role="alert"></p>
       <button class="button-primary pending-first" type="submit">Acessar resultados <span aria-hidden="true">→</span></button>
@@ -432,6 +432,6 @@
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="script.js?v=likely-back-1"></script>
+  <script src="script.js?v=central-1"></script>
 </body>
 </html>
