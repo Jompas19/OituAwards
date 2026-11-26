@@ -238,6 +238,7 @@ function showPendingVotes() {
   const missing = missingCategories();
   if (!missing.length) return;
   reviewAttempted = true;
+  saveStageDraft('ballot');
   syncPendingShortcut();
   const done = CATEGORIES.length - missing.length;
   document.getElementById('pendingTitle').textContent = missing.length === 1 ? 'Falta só um voto!' : 'Faltam alguns votos!';
@@ -584,6 +585,7 @@ function selectNominee(card, nomineeIndex) {
     nomineeGrid.classList.remove('has-selection');
     selectedNominee = null;
     categorySelections[currentCategory] = null;
+    saveStageDraft('ballot');
     syncPendingShortcut();
     return;
   }
@@ -593,6 +595,7 @@ function selectNominee(card, nomineeIndex) {
   nomineeGrid.classList.add('has-selection');
   selectedNominee = nomineeIndex;
   categorySelections[currentCategory] = nomineeIndex;
+  saveStageDraft('ballot');
   syncPendingShortcut();
 
   if (window.matchMedia('(max-width: 760px)').matches) {
@@ -811,14 +814,32 @@ document.addEventListener('click', (event) => {
 cancelIdentity.addEventListener('click', () => closeModal());
 
 confirmIdentity.addEventListener('click', () => {
-  if (!selectedVoter || confirmIdentity.disabled || transitionLocked) return;
-  let participation;
-  try { participation = readParticipation(selectedVoter); }
-  catch (_) { showToast('Não foi possível consultar as respostas salvas. Habilite o armazenamento do navegador.'); return; }
+  if (!selectedVoter || confirmIdentity.disabled || transitionLocked || resumeDialog.open) return;
+  try {
+    const participation = readParticipation(selectedVoter);
+    const kind = participationKinds.find(k => !participation.records[k]);
+    if (!kind) { resetParticipation(); preparePersonal(participation.records); enterParticipation('personal'); return; }
+    const draft = readStageDraft(kind, selectedVoter);
+    if (draft || participation.exists) {
+      resumeChoice = {voter:selectedVoter, kind};
+      const label = personalLabels[kind];
+      const answered = draft ? draft.selections.filter(Number.isInteger).length : 0;
+      document.getElementById('resumeTitle').textContent = draft ? 'Continue de onde parou!' : 'Sua participação continua!';
+      document.getElementById('resumeCopy').textContent = draft
+        ? label + ': ' + answered + ' de ' + stageLength(kind) + ' respostas salvas. As respostas desta etapa só entram no resultado depois da conclusão.'
+        : 'Sua próxima etapa é: ' + label + '. As etapas já confirmadas continuam registradas.';
+      document.getElementById('resumeStartOver').hidden = !draft;
+      document.getElementById('resumeContinue').textContent = draft ? 'Continuar de onde parei →' : 'Continuar participação →';
+      resumeDialog.showModal();
+      document.getElementById('resumeContinue').focus();
+      return;
+    }
+    beginParticipation(participation, kind, draft);
+  } catch (_) { showToast('Não foi possível consultar as respostas salvas. Habilite o armazenamento do navegador.'); }
+});
+
+function enterParticipation(destination) {
   try { sessionStorage.setItem('oituawards_voter', selectedVoter); } catch (_) {}
-  const destination = participation.exists ? 'personal' : 'vote';
-  if (participation.exists) preparePersonal(participation.records);
-  else resetParticipation();
   confirmIdentity.disabled = true;
   voterSelectButton.disabled = true;
   cancelIdentity.disabled = true;
@@ -848,7 +869,7 @@ confirmIdentity.addEventListener('click', () => {
   } else {
     beginCurtainTransition();
   }
-});
+}
 
 // Category-to-category: a short golden sweep and directional content movement.
 async function moveCategory(index) {
@@ -864,6 +885,7 @@ async function moveCategory(index) {
     // Clear the outgoing animation before revealing new content.
     voteStage.getAnimations().forEach(animation => animation.cancel());
     currentCategory = index;
+    saveStageDraft('ballot');
     renderCategory(index);
     voteScroll.scrollTop = 0;
     if (!reducedMotion()) await voteStage.animate([{opacity:0,transform:`translateX(${direction * 27}px)`},{opacity:1,transform:'translateX(0)'}],{duration:260,easing:'cubic-bezier(.2,.75,.25,1)'}).finished;
@@ -929,6 +951,7 @@ function preparePremiere() {
 async function premiereReview() {
   if (transitionLocked || pendingDialog.open) return;
   if (missingCategories().length) { showPendingVotes(); return; }
+  saveStageDraft('ballot', true);
   transitionLocked = true;
   const animated = !reducedMotion();
   try {
@@ -964,7 +987,7 @@ async function elegantTransition(target) {
   try {
     if (!reducedMotion()) { pageTransition.classList.add('is-reviewing'); await wait(480); }
     if (target === 'review') { renderReview(); reviewStage.classList.remove('is-revealing'); }
-    if (target === 'vote') currentCategory = 0;
+    if (target === 'vote') { currentCategory = 0; saveStageDraft('ballot'); }
     setScreen(target);
     if (target === 'vote') renderCategory(0);
     if (target === 'review' && !reducedMotion()) { void reviewStage.offsetWidth; reviewStage.classList.add('is-revealing'); }
@@ -975,9 +998,9 @@ async function elegantTransition(target) {
 
 function persistBallot() {
   const ballot = { voter:selectedVoter, confirmedAt:new Date().toISOString(), votes:CATEGORIES.map((category,i)=>({category:category.title, nominee:category.nominees[categorySelections[i]]?.name ?? null, nomineeIndex:categorySelections[i]})) };
-  personalRecords.ballot = ballot;
-  try { localStorage.setItem('oituawards_ballot:' + selectedVoter, JSON.stringify(ballot)); return true; }
+  try { localStorage.setItem(participationKey('ballot', selectedVoter), JSON.stringify(ballot)); }
   catch (_) { return false; }
+  personalRecords.ballot = ballot; clearStageDraft('ballot', selectedVoter); return true;
 }
 
 
@@ -1007,6 +1030,7 @@ async function depositBallot() {
   transitionLocked = true;
   confirmVotes.disabled = editVotes.disabled = true;
   const saved = persistBallot();
+  if (!saved) { transitionLocked=false; confirmVotes.disabled=editVotes.disabled=false; showToast('Não foi possível confirmar os votos. Tente novamente.'); return; }
   const cards = [...reviewGrid.querySelectorAll('[data-voted]')];
   let presentedReceipt = false;
   const showReceipt = () => {
@@ -1121,7 +1145,7 @@ document.querySelectorAll('[data-home]').forEach((element) => {
 });
 
 document.addEventListener('keydown', (event) => {
-  if (pendingDialog.open) return;
+  if (pendingDialog.open || document.getElementById('resumeDialog').open) return;
   if (event.key === 'Escape' && voterSelect.classList.contains('is-open')) {
     closeSelect();
     voterSelectButton.focus();
@@ -1491,7 +1515,7 @@ function renderQuizQuestion() {
     const letter = document.createElement('span'); letter.className = 'quiz-letter'; letter.textContent = 'ABCD'[index]; letter.setAttribute('aria-hidden','true');
     const text = document.createElement('span'); text.className = 'quiz-option-text'; text.textContent = option.text;
     const check = document.createElement('span'); check.className = 'quiz-check'; check.textContent = '✓'; check.setAttribute('aria-hidden','true');
-    radio.addEventListener('change', () => { if (quizBusy) return; quizAnswers[quizIndex] = index; updateQuizControls(); });
+    radio.addEventListener('change', () => { if (quizBusy) return; quizAnswers[quizIndex] = index; saveStageDraft('quiz'); updateQuizControls(); });
     label.append(radio,letter,text,check); quizOptions.append(label);
   });
   quizNext.querySelector('span').textContent = quizIndex === QUIZ_QUESTIONS.length-1 ? 'Concluir dinâmica' : 'Próxima';
@@ -1510,7 +1534,7 @@ async function moveQuiz(target) {
       quizFlash.classList.remove('is-sweeping'); void quizFlash.offsetWidth; quizFlash.classList.add('is-sweeping');
       await quizPanel.animate([{opacity:1,transform:'translateX(0)'},{opacity:0,transform:`translateX(${-direction*22}px)`}],{duration:180,easing:'ease-in',fill:'none'}).finished;
     }
-    quizIndex = target; renderQuizQuestion(); quizScroll.scrollTop = 0; animateQuizIn(direction);
+    quizIndex = target; saveStageDraft('quiz'); renderQuizQuestion(); quizScroll.scrollTop = 0; animateQuizIn(direction);
     if (!reducedMotion()) await wait(390);
   } finally { quizBusy = false; quizOptions.disabled = false; updateQuizControls(); quizQuestion.focus({preventScroll:true}); }
 }
@@ -1518,14 +1542,15 @@ function storeQuiz() {
   const scores = {Tiago:0,Osvaldo:0,Marcelo:0,Mauri:0};
   const answers = QUIZ_QUESTIONS.map((q,i) => { const option = q.options[quizAnswers[i]]; scores[option.profile]++; return {question:i+1, option:'ABCD'[quizAnswers[i]], text:option.text}; });
   const record = {voter:selectedVoter, completedAt:new Date().toISOString(), answers, scores};
-  personalRecords.quiz = record;
-  try { localStorage.setItem('oituawards_quiz:'+selectedVoter,JSON.stringify(record)); return true; } catch (_) { return false; }
+  try { localStorage.setItem(participationKey('quiz', selectedVoter),JSON.stringify(record)); } catch (_) { return false; }
+  personalRecords.quiz = record; clearStageDraft('quiz', selectedVoter); return true;
 }
 async function finishQuiz() {
   if (quizBusy || transitionLocked || quizAnswers.some((a,i)=>!Number.isInteger(a)||!QUIZ_QUESTIONS[i].options[a])) return;
   if (preventRepeatStage('quiz')) return;
   quizBusy = true; quizOptions.disabled = true; updateQuizControls();
   const saved = storeQuiz();
+  if (!saved) { quizBusy=false; quizOptions.disabled=false; updateQuizControls(); showToast('Não foi possível confirmar as respostas. Tente novamente.'); return; }
   if (!reducedMotion()) {
     quizFlash.classList.remove('is-sweeping'); void quizFlash.offsetWidth; quizFlash.classList.add('is-sweeping');
     await quizPlay.animate([{opacity:1,transform:'scale(1)'},{opacity:0,transform:'scale(.97)'}],{duration:250,easing:'ease-in'}).finished;
@@ -1539,6 +1564,7 @@ function openQuizStage() {
   if (transitionLocked || !selectedVoter) return;
   quizAnswers.fill(null); quizIndex = 0; quizBusy = false; quizOptions.disabled = false;
   quizIntro.hidden = false; quizPlay.hidden = true; quizDone.hidden = true;
+  saveStageDraft('quiz', false, true);
   transitionTo('quiz');
   setTimeout(()=>document.getElementById('quizIntroTitle').focus({preventScroll:true}),reducedMotion()?0:1110);
 }
@@ -1547,7 +1573,7 @@ document.getElementById('continueAwards').addEventListener('click', () => {
 });
 document.getElementById('beginQuiz').addEventListener('click', () => {
   if (transitionLocked || quizBusy || quizIntro.hidden) return;
-  quizIntro.hidden = true; quizPlay.hidden = false; renderQuizQuestion(); quizScroll.scrollTop = 0; animateQuizIn(); quizQuestion.focus({preventScroll:true});
+  quizIntro.hidden = true; quizPlay.hidden = false; saveStageDraft('quiz'); renderQuizQuestion(); quizScroll.scrollTop = 0; animateQuizIn(); quizQuestion.focus({preventScroll:true});
 });
 quizBack.addEventListener('click',()=>moveQuiz(quizIndex-1));
 quizNext.addEventListener('click',()=> { if (quizNext.disabled || quizBusy || transitionLocked) return; if (quizIndex === QUIZ_QUESTIONS.length-1) finishQuiz(); else moveQuiz(quizIndex+1); });
@@ -1601,7 +1627,7 @@ function renderLikelyCast() {
     btn.append(beam,floor,image,check); likelyCast.append(btn);
     btn.addEventListener('click', () => {
       if (likelyBusy || transitionLocked) return;
-      likelyAnswers[likelyIndex] = index; updateLikely();
+      likelyAnswers[likelyIndex] = index; saveStageDraft('likely'); updateLikely();
     });
   });
 }
@@ -1635,8 +1661,9 @@ async function advanceLikely() {
       if (likelyAnswers.some(a=>!Number.isInteger(a)||!VOTERS[a])) return;
       if (preventRepeatStage('likely')) return;
       const record={voter:selectedVoter, completedAt:new Date().toISOString(), answers:LIKELY_QUESTIONS.map((question,i)=>({question,person:VOTERS[likelyAnswers[i]]}))};
-      personalRecords.likely = record;
-      let saved=true; try {localStorage.setItem('oituawards_likely:'+selectedVoter,JSON.stringify(record));} catch (_) {saved=false;}
+      let saved=true; try {localStorage.setItem(participationKey('likely', selectedVoter),JSON.stringify(record));} catch (_) {saved=false;}
+      if (!saved) { showToast('Não foi possível confirmar as respostas. Tente novamente.'); return; }
+      personalRecords.likely = record; clearStageDraft('likely', selectedVoter);
       if (!reducedMotion()) await likelyPlay.animate([{opacity:1},{opacity:0}],{duration:300,easing:'ease-in'}).finished;
       likelyPlay.hidden=true; likelyDone.hidden=false; likelyScroll.scrollTop=0;
       document.getElementById('likelyDoneCopy').textContent=saved?'Obrigado por participar. Até o grande momento!':'Dinâmica concluída, mas não foi possível salvar as respostas neste dispositivo.';
@@ -1644,7 +1671,7 @@ async function advanceLikely() {
       document.getElementById('likelyDoneTitle').focus({preventScroll:true}); return;
     }
     if (!reducedMotion()) await likelyQuestion.animate([{opacity:1,transform:'translateY(0)',filter:'brightness(1)'},{opacity:0,transform:'translateY(-10px)',filter:'brightness(1.6)'}],{duration:180,easing:'ease-in'}).finished;
-    likelyIndex++; showLikelyQuestion();
+    likelyIndex++; saveStageDraft('likely'); showLikelyQuestion();
     if (likelyScroll.scrollTop > 0) likelyScroll.scrollTo({top:0,behavior:reducedMotion()?'instant':'smooth'});
     if (!reducedMotion()) await likelyQuestion.animate([{opacity:0,transform:'translateY(12px)',filter:'brightness(1.7)'},{opacity:1,transform:'translateY(0)',filter:'brightness(1)'}],{duration:330,easing:'cubic-bezier(.2,.8,.2,1)'}).finished;
   } finally { likelyBusy=false; if(!likelyPlay.hidden){updateLikely();likelyQuestion.focus({preventScroll:true});} }
@@ -1652,7 +1679,7 @@ async function advanceLikely() {
 function openLikelyStage(){
   if(transitionLocked || !selectedVoter) return;
   likelyIndex=0; likelyBusy=false; likelyAnswers.fill(null); likelyPlay.hidden=false; likelyDone.hidden=true;
-  renderLikelyCast(); showLikelyQuestion(); transitionTo('likely');
+  renderLikelyCast(); showLikelyQuestion(); saveStageDraft('likely'); transitionTo('likely');
   setTimeout(()=>likelyQuestion.focus({preventScroll:true}),reducedMotion()?0:1110);
 }
 document.getElementById('continueToLikely').addEventListener('click',()=>{
@@ -1750,7 +1777,7 @@ function normalizeBallotRecord(record) {
 function readResultsRecord(kind,voter) {
   try {
     const record = JSON.parse(localStorage.getItem('oituawards_'+kind+':'+voter));
-    return record && record.voter===voter ? (kind==='ballot'?normalizeBallotRecord(record):record) : null;
+    return completedRecord(kind, record, voter) ? (kind==='ballot'?normalizeBallotRecord(record):record) : null;
   } catch (_) { return null; }
 }
 function collectResults() {
@@ -1854,13 +1881,142 @@ window.addEventListener('storage',event=>{if(resultsUnlocked&&document.getElemen
 /* V59 — participação única por nome, no armazenamento local. */
 const participationKinds = ['ballot','quiz','likely'];
 const participationKey = (kind,voter) => 'oituawards_'+kind+':'+voter;
+
+/* Resumable participation: drafts are separate from confirmed results. */
+const draftKey = (kind,voter) => 'oituawards_draft_'+kind+':'+voter;
+const stageLength = kind => kind==='ballot' ? CATEGORIES.length : kind==='quiz' ? QUIZ_QUESTIONS.length : LIKELY_QUESTIONS.length;
+const stageSelections = kind => kind==='ballot' ? categorySelections : kind==='quiz' ? quizAnswers : likelyAnswers;
+function validSelection(kind,i,value) {
+  return Number.isInteger(value) && value>=0 && value<(kind==='ballot'?CATEGORIES[i].nominees.length:kind==='quiz'?QUIZ_QUESTIONS[i].options.length:VOTERS.length);
+}
+function ballotChoices(record) {
+  const normalized = normalizeBallotRecord(record);
+  return CATEGORIES.map((c,i)=>{
+    const entry=normalized?.votes?.[i];
+    if(!entry || entry.category!==c.title || typeof entry.nominee!=='string') return null;
+    if(validSelection('ballot',i,entry.nomineeIndex) && c.nominees[entry.nomineeIndex].name===entry.nominee) return entry.nomineeIndex;
+    const index=c.nominees.findIndex(n=>n.name===entry.nominee);
+    return index<0?null:index;
+  });
+}
+function recordChoices(kind,record) {
+  if(kind==='ballot') return ballotChoices(record);
+  if(kind==='quiz') return QUIZ_QUESTIONS.map((q,i)=>{
+    const a=record?.answers?.[i]; const index=typeof a?.option==='string' && /^[ABCD]$/.test(a.option)?'ABCD'.indexOf(a.option):-1;
+    return a?.question===i+1 && q.options[index]?.text===a.text ? index : null;
+  });
+  return LIKELY_QUESTIONS.map((q,i)=>{
+    const a=record?.answers?.[i]; const index=VOTERS.indexOf(a?.person);
+    return a?.question===q && index>=0?index:null;
+  });
+}
+function completedRecord(kind,record,voter) {
+  if(!record || record.voter!==voter) return false;
+  const choices=recordChoices(kind,record);
+  if(kind!=='ballot') return !!record.completedAt && Array.isArray(record.answers) && record.answers.length===stageLength(kind) && choices.every(Number.isInteger);
+  if(!record.confirmedAt || !Array.isArray(record.votes)) return false;
+  const titles=new Set(record.votes.map(v=>v?.category));
+  if(titles.size!==record.votes.length || record.votes.some(v=>!v || typeof v.nominee!=='string' || !v.nominee || !CATEGORIES.some(c=>c.title===v.category))) return false;
+  // Preserve previously confirmed ballots from before the GymRats category was introduced.
+  return (record.votes.length===CATEGORIES.length && choices.every(Number.isInteger)) ||
+    (record.votes.length===CATEGORIES.length-1 && !titles.has('Melhor foto do GymRats') &&
+     CATEGORIES.every((c,i)=>c.title==='Melhor foto do GymRats' || Number.isInteger(choices[i])));
+}
+function readStageDraft(kind,voter) {
+  const raw=localStorage.getItem(draftKey(kind,voter));
+  let draft=null;
+  try { draft=JSON.parse(raw); } catch (_) {}
+  if(draft?.voter===voter && draft.kind===kind && Array.isArray(draft.selections)) {
+    const selections=kind==='ballot' && Array.isArray(draft.votes) ? ballotChoices(draft) :
+      Array.from({length:stageLength(kind)},(_,i)=>validSelection(kind,i,draft.selections[i])?draft.selections[i]:null);
+    const mappedIndex=kind==='ballot' && draft.category ? CATEGORIES.findIndex(c=>c.title===draft.category) : draft.index;
+    const index=Number.isInteger(mappedIndex)&&mappedIndex>=0&&mappedIndex<stageLength(kind)?mappedIndex:0;
+    const firstMissing=selections.findIndex(v=>v===null);
+    return {...draft,selections,index:kind!=='ballot'&&firstMissing>=0?Math.min(index,firstMissing):index,review:kind==='ballot'&&draft.review&&firstMissing<0};
+  }
+  // Recover old partial records without counting them as confirmed or erasing them.
+  let old=null;
+  try { old=JSON.parse(localStorage.getItem(participationKey(kind,voter))); } catch (_) {}
+  if(old?.voter===voter && !completedRecord(kind,old,voter)) {
+    const selections=recordChoices(kind,old);
+    if(selections.some(Number.isInteger)) {
+      const missing=selections.findIndex(v=>v===null);
+      return {voter,kind,selections,index:missing<0?stageLength(kind)-1:missing,review:kind==='ballot'&&missing<0};
+    }
+  }
+  return null;
+}
+function clearStageDraft(kind,voter) {
+  try { localStorage.removeItem(draftKey(kind,voter)); } catch (_) {}
+}
+function saveStageDraft(kind,review=false,intro=false) {
+  if(!VOTERS.includes(selectedVoter)) return;
+  const selections=[...stageSelections(kind)];
+  const index=kind==='ballot'?currentCategory:kind==='quiz'?quizIndex:likelyIndex;
+  const draft={voter:selectedVoter,kind,selections,index,review,intro,updatedAt:new Date().toISOString()};
+  if(kind==='ballot') {
+    draft.category=CATEGORIES[index].title; draft.reviewAttempted=reviewAttempted;
+    draft.votes=CATEGORIES.map((c,i)=>({category:c.title,nominee:c.nominees[selections[i]]?.name??null,nomineeIndex:selections[i]}));
+  }
+  try {
+    let existing=null;
+    try { existing=JSON.parse(localStorage.getItem(participationKey(kind,selectedVoter))); } catch (_) {}
+    if(completedRecord(kind,existing,selectedVoter)) return;
+    localStorage.setItem(draftKey(kind,selectedVoter),JSON.stringify(draft));
+  } catch (_) { showToast('Não foi possível salvar o progresso neste dispositivo.'); }
+}
+const resumeDialog=document.getElementById('resumeDialog');
+let resumeChoice=null;
+function beginParticipation(participation,kind,draft) {
+  resetParticipation();
+  personalRecords=participation.records;
+  if(draft) stageSelections(kind).splice(0,stageLength(kind),...draft.selections);
+  let destination='vote';
+  if(kind==='ballot') {
+    currentCategory=draft?.index??0; reviewAttempted=!!draft?.reviewAttempted;
+    renderCategory(currentCategory);
+    if(draft?.review && !missingCategories().length) {renderReview(); destination='review';}
+    saveStageDraft(kind,destination==='review');
+  } else if(kind==='quiz') {
+    destination='quiz'; quizIndex=draft?.index??0; quizBusy=false; quizOptions.disabled=false;
+    quizIntro.hidden=!!draft&&!draft.intro; quizPlay.hidden=!quizIntro.hidden; quizDone.hidden=true;
+    if(quizIntro.hidden) renderQuizQuestion();
+    saveStageDraft(kind,false,!quizIntro.hidden);
+  } else {
+    destination='likely'; likelyIndex=draft?.index??0; likelyBusy=false; likelyPlay.hidden=false; likelyDone.hidden=true;
+    renderLikelyCast(); showLikelyQuestion(); saveStageDraft(kind);
+  }
+  enterParticipation(destination);
+}
+function chooseResume(restart) {
+  if(!resumeDialog.open || !resumeChoice || transitionLocked || resumeChoice.voter!==selectedVoter) return;
+  try {
+    const participation=readParticipation(selectedVoter);
+    const kind=participationKinds.find(k=>!participation.records[k]);
+    if(!kind || kind!==resumeChoice.kind) {resumeDialog.close();showToast('As respostas foram atualizadas. Selecione o participante novamente.');return;}
+    const draft=readStageDraft(kind,selectedVoter);
+    if(restart) {
+      // Only remove the current unfinished stage; confirmed stages stay protected.
+      localStorage.removeItem(draftKey(kind,selectedVoter));
+      const key=participationKey(kind,selectedVoter);
+      const raw=localStorage.getItem(key);
+      if(raw!==null) localStorage.removeItem(key);
+    }
+    resumeDialog.close();
+    beginParticipation(participation,kind,restart?null:draft);
+  } catch (_) {showToast('Não foi possível acessar o progresso salvo. Tente novamente.');}
+}
+document.getElementById('resumeContinue').addEventListener('click',()=>chooseResume(false));
+document.getElementById('resumeStartOver').addEventListener('click',()=>chooseResume(true));
+document.getElementById('resumeCancel').addEventListener('click',()=>resumeDialog.close());
+resumeDialog.addEventListener('close',()=>{resumeChoice=null; if(!confirmIdentity.disabled && identityModal.classList.contains('is-open')) confirmIdentity.focus({preventScroll:true});});
+
 function readParticipation(voter) {
   const records={ballot:null,quiz:null,likely:null}; let exists=false;
   for (const kind of participationKinds) {
     const raw=localStorage.getItem(participationKey(kind,voter));
     if(raw===null) continue;
-    exists=true;
-    try { const r=JSON.parse(raw); if(r?.voter===voter && Array.isArray(kind==='ballot'?r.votes:r.answers)) records[kind]=kind==='ballot'?normalizeBallotRecord(r):r; } catch (_) {}
+    try { const r=JSON.parse(raw); if(completedRecord(kind,r,voter)) { exists=true; records[kind]=kind==='ballot'?normalizeBallotRecord(r):r; } } catch (_) {}
   }
   return {records,exists};
 }
@@ -1884,8 +2040,9 @@ function preparePersonal(records) {
 }
 function preventRepeatStage(kind) {
   try {
-    if(localStorage.getItem(participationKey(kind,selectedVoter))===null) return false;
-    preparePersonal(readParticipation(selectedVoter).records); transitionTo('personal');
+    const participation = readParticipation(selectedVoter);
+    if(!participation.records[kind]) return false;
+    preparePersonal(participation.records); transitionTo('personal');
     showToast('Esta dinâmica já possui respostas registradas.'); return true;
   } catch (_) {showToast('Não foi possível verificar as respostas salvas. Tente novamente.');return true;}
 }
@@ -1914,7 +2071,7 @@ document.getElementById('deleteParticipationForm').addEventListener('submit',eve
   event.preventDefault();
   if(!deleteDialog.open||transitionLocked||!deletionVoter||deletionVoter!==selectedVoter||!document.getElementById('personalScreen').classList.contains('is-active'))return;
   if(deletePassword.value!=='excluirrespostas@'){deleteError.textContent='Senha incorreta. Nenhuma resposta foi excluída.';deletePassword.setAttribute('aria-invalid','true');deletePassword.select();return;}
-  const keys=participationKinds.map(kind=>participationKey(kind,deletionVoter));
+  const keys=participationKinds.flatMap(kind=>[participationKey(kind,deletionVoter),draftKey(kind,deletionVoter)]);
   try {
     // The same keys are read by the results panel; no independent tally can retain old votes.
     for(const key of keys)localStorage.removeItem(key);

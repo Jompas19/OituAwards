@@ -385,6 +385,17 @@
     </div>
     <div id="flightLayer" class="flight-layer"></div>
   </div>
+  <dialog id="resumeDialog" class="pending-dialog results-password" aria-labelledby="resumeTitle" aria-describedby="resumeCopy">
+    <div class="pending-shell">
+      <div class="pending-emblem" aria-hidden="true"><span>↺</span></div>
+      <p class="category-kicker">SEU PROGRESSO</p>
+      <h2 id="resumeTitle">Continue de onde parou!</h2>
+      <p id="resumeCopy" class="results-password-copy"></p>
+      <button id="resumeContinue" class="button-primary pending-first" type="button">Continuar de onde parei →</button>
+      <button id="resumeStartOver" class="edit-votes pending-close" type="button">Começar do zero nesta etapa</button>
+      <button id="resumeCancel" class="edit-votes pending-close" type="button">Voltar</button>
+    </div>
+  </dialog>
   <dialog id="pendingDialog" class="pending-dialog" aria-labelledby="pendingTitle" aria-describedby="pendingCopy">
     <div class="pending-shell">
       <div class="pending-emblem" aria-hidden="true"><span>✦</span></div>
@@ -420,6 +431,6 @@
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=resume-1"></script>
 </body>
 </html>
