@@ -1612,6 +1612,7 @@ const likelyDone = document.getElementById('likelyDone');
 const likelyCast = document.getElementById('likelyCast');
 const likelyQuestion = document.getElementById('likelyQuestion');
 const likelyNext = document.getElementById('likelyNext');
+const likelyBack = document.getElementById('likelyBack');
 const likelyAnswers = Array(LIKELY_QUESTIONS.length).fill(null);
 let likelyIndex = 0, likelyBusy = false;
 containVerticalOverscroll(likelyScroll);
@@ -1637,6 +1638,7 @@ function updateLikely() {
   [...likelyCast.children].forEach((btn,i)=>{
     btn.classList.toggle('is-lit', i===selected); btn.setAttribute('aria-pressed',String(i===selected)); btn.disabled=likelyBusy;
   });
+  likelyBack.disabled = likelyBusy || likelyIndex === 0;
   likelyNext.disabled = likelyBusy || !Number.isInteger(selected);
   likelyNext.classList.toggle('is-ready', Number.isInteger(selected) && !likelyBusy);
   document.getElementById('likelyHint').textContent = Number.isInteger(selected) ? 'Escolha registrada.' : 'Escolha um personagem.';
@@ -1651,13 +1653,14 @@ function showLikelyQuestion() {
   likelyNext.querySelector('span').textContent = likelyIndex === LIKELY_QUESTIONS.length-1 ? 'Concluir dinâmica' : 'Próxima';
   updateLikely();
 }
-async function advanceLikely() {
-  if (likelyBusy || transitionLocked || !Number.isInteger(likelyAnswers[likelyIndex])) return;
+async function advanceLikely(direction=1) {
+  if (likelyBusy || transitionLocked || likelyPlay.hidden || (direction!==1 && direction!==-1)) return;
+  if (direction===-1 ? likelyIndex===0 : !Number.isInteger(likelyAnswers[likelyIndex])) return;
   likelyBusy=true; updateLikely();
   likelyCast.classList.remove('has-choice');
   [...likelyCast.children].forEach(btn=>{btn.classList.remove('is-lit');btn.setAttribute('aria-pressed','false');});
   try {
-    if (likelyIndex === LIKELY_QUESTIONS.length-1) {
+    if (direction===1 && likelyIndex === LIKELY_QUESTIONS.length-1) {
       if (likelyAnswers.some(a=>!Number.isInteger(a)||!VOTERS[a])) return;
       if (preventRepeatStage('likely')) return;
       const record={voter:selectedVoter, completedAt:new Date().toISOString(), answers:LIKELY_QUESTIONS.map((question,i)=>({question,person:VOTERS[likelyAnswers[i]]}))};
@@ -1670,10 +1673,10 @@ async function advanceLikely() {
 
       document.getElementById('likelyDoneTitle').focus({preventScroll:true}); return;
     }
-    if (!reducedMotion()) await likelyQuestion.animate([{opacity:1,transform:'translateY(0)',filter:'brightness(1)'},{opacity:0,transform:'translateY(-10px)',filter:'brightness(1.6)'}],{duration:180,easing:'ease-in'}).finished;
-    likelyIndex++; saveStageDraft('likely'); showLikelyQuestion();
+    if (!reducedMotion()) await likelyQuestion.animate([{opacity:1,transform:'translateY(0)',filter:'brightness(1)'},{opacity:0,transform:`translateY(${-direction*10}px)`,filter:'brightness(1.6)'}],{duration:180,easing:'ease-in'}).finished;
+    likelyIndex+=direction; saveStageDraft('likely'); showLikelyQuestion();
     if (likelyScroll.scrollTop > 0) likelyScroll.scrollTo({top:0,behavior:reducedMotion()?'instant':'smooth'});
-    if (!reducedMotion()) await likelyQuestion.animate([{opacity:0,transform:'translateY(12px)',filter:'brightness(1.7)'},{opacity:1,transform:'translateY(0)',filter:'brightness(1)'}],{duration:330,easing:'cubic-bezier(.2,.8,.2,1)'}).finished;
+    if (!reducedMotion()) await likelyQuestion.animate([{opacity:0,transform:`translateY(${direction*12}px)`,filter:'brightness(1.7)'},{opacity:1,transform:'translateY(0)',filter:'brightness(1)'}],{duration:330,easing:'cubic-bezier(.2,.8,.2,1)'}).finished;
   } finally { likelyBusy=false; if(!likelyPlay.hidden){updateLikely();likelyQuestion.focus({preventScroll:true});} }
 }
 function openLikelyStage(){
@@ -1685,7 +1688,8 @@ function openLikelyStage(){
 document.getElementById('continueToLikely').addEventListener('click',()=>{
   if(!quizDone.hidden) openLikelyStage();
 });
-likelyNext.addEventListener('click',advanceLikely);
+likelyBack.addEventListener('click',()=>advanceLikely(-1));
+likelyNext.addEventListener('click',()=>advanceLikely(1));
 
 
 /* V56 — início personalizado após a última dinâmica. Somente respostas efetivamente concluídas na sessão. */

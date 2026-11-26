@@ -1597,3 +1597,15 @@ html, body {
 /* Restart controls and conditional password protection. */
 #deleteParticipationPassword[hidden],#deleteParticipationPasswordLabel[hidden] {display:none;}
 #resumeRestartAll {color:#e9b29c;}
+
+/* Previous/next navigation for the likely stage, including narrow phones. */
+.likely-actions { align-items:center; justify-content:space-between; gap:12px; width:min(100%,560px); margin-inline:auto; }
+.likely-actions button { min-height:48px; min-width:0; }
+.likely-actions .stage-button { flex:0 0 auto; }
+.likely-actions .stage-button:disabled { opacity:.38; cursor:not-allowed; pointer-events:none; }
+.likely-actions .start-button { min-width:0; max-width:100%; }
+@media(max-width:760px) {
+  .likely-actions { gap:8px; }
+  .likely-actions .stage-button { padding:10px 12px; font-size:13px; }
+  .likely-actions .start-button { padding:10px 14px; font-size:clamp(17px,5.1vw,22px); gap:7px; }
+}
