@@ -1590,3 +1590,6 @@ html, body {
   max-width: 199%;
   flex-shrink: 0;
 }
+
+/* Hide restart when the next unfinished stage has no draft yet. */
+#resumeStartOver[hidden] { display:none; }
