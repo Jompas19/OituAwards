@@ -2102,7 +2102,11 @@ document.getElementById('deleteParticipationForm').addEventListener('submit',eve
   const fromResume=deletionOrigin==='resume';
   if(fromResume ? (!resumeDialog.open||resumeChoice?.voter!==deletionVoter) : !document.getElementById('personalScreen').classList.contains('is-active')) return;
   try { if(readParticipation(deletionVoter).exists && !deletionRequiresPassword) {
-    deleteDialog.close(); openFullReset(deletionOrigin); return;
+    deletionRequiresPassword=true;
+    document.getElementById('deleteParticipationPasswordLabel').hidden=false;
+    deletePassword.hidden=false; deletePassword.required=true;
+    document.getElementById('deleteParticipationCopy').textContent='Há respostas confirmadas neste dispositivo. Para excluir toda a participação, informe a senha de exclusão.';
+    deleteError.textContent='Os registros foram atualizados. Confirme com a senha.';deletePassword.focus();return;
   } } catch (_) {deleteError.textContent='Não foi possível verificar as respostas. Nenhum registro foi excluído.';return;}
   if(deletionRequiresPassword && deletePassword.value!=='excluirrespostas@'){deleteError.textContent='Senha incorreta. Nenhuma resposta foi excluída.';deletePassword.setAttribute('aria-invalid','true');deletePassword.select();return;}
   const keys=participationKinds.flatMap(kind=>[participationKey(kind,deletionVoter),draftKey(kind,deletionVoter)]);
