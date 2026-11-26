@@ -1593,3 +1593,7 @@ html, body {
 
 /* Hide restart when the next unfinished stage has no draft yet. */
 #resumeStartOver[hidden] { display:none; }
+
+/* Restart controls and conditional password protection. */
+#deleteParticipationPassword[hidden],#deleteParticipationPasswordLabel[hidden] {display:none;}
+#resumeRestartAll {color:#e9b29c;}

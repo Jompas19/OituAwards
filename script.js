@@ -828,7 +828,7 @@ confirmIdentity.addEventListener('click', () => {
       document.getElementById('resumeCopy').textContent = draft
         ? label + ': ' + answered + ' de ' + stageLength(kind) + ' respostas salvas. As respostas desta etapa só entram no resultado depois da conclusão.'
         : 'Sua próxima etapa é: ' + label + '. As etapas já confirmadas continuam registradas.';
-      document.getElementById('resumeStartOver').hidden = !draft;
+      document.getElementById('resumeStartOver').hidden = !draft || (kind==='ballot' && !participation.exists);
       document.getElementById('resumeContinue').textContent = draft ? 'Continuar de onde parei →' : 'Continuar participação →';
       resumeDialog.showModal();
       document.getElementById('resumeContinue').focus();
@@ -1929,6 +1929,7 @@ function readStageDraft(kind,voter) {
   if(draft?.voter===voter && draft.kind===kind && Array.isArray(draft.selections)) {
     const selections=kind==='ballot' && Array.isArray(draft.votes) ? ballotChoices(draft) :
       Array.from({length:stageLength(kind)},(_,i)=>validSelection(kind,i,draft.selections[i])?draft.selections[i]:null);
+    if(!selections.some(Number.isInteger)) return null;
     const mappedIndex=kind==='ballot' && draft.category ? CATEGORIES.findIndex(c=>c.title===draft.category) : draft.index;
     const index=Number.isInteger(mappedIndex)&&mappedIndex>=0&&mappedIndex<stageLength(kind)?mappedIndex:0;
     const firstMissing=selections.findIndex(v=>v===null);
@@ -1962,6 +1963,13 @@ function saveStageDraft(kind,review=false,intro=false) {
     let existing=null;
     try { existing=JSON.parse(localStorage.getItem(participationKey(kind,selectedVoter))); } catch (_) {}
     if(completedRecord(kind,existing,selectedVoter)) return;
+    // Browsing without choosing anything is not a started participation.
+    if(!selections.some((value,i)=>validSelection(kind,i,value))) {
+      localStorage.removeItem(draftKey(kind,selectedVoter));
+      // A recovered, subsequently cleared legacy partial record must not reappear.
+      if(existing?.voter===selectedVoter) localStorage.removeItem(participationKey(kind,selectedVoter));
+      return;
+    }
     localStorage.setItem(draftKey(kind,selectedVoter),JSON.stringify(draft));
   } catch (_) { showToast('Não foi possível salvar o progresso neste dispositivo.'); }
 }
@@ -2008,6 +2016,10 @@ function chooseResume(restart) {
 }
 document.getElementById('resumeContinue').addEventListener('click',()=>chooseResume(false));
 document.getElementById('resumeStartOver').addEventListener('click',()=>chooseResume(true));
+document.getElementById('resumeRestartAll').addEventListener('click',()=>{
+  if(!resumeDialog.open||!resumeChoice||resumeChoice.voter!==selectedVoter||transitionLocked) return;
+  openFullReset('resume');
+});
 document.getElementById('resumeCancel').addEventListener('click',()=>resumeDialog.close());
 resumeDialog.addEventListener('close',()=>{resumeChoice=null; if(!confirmIdentity.disabled && identityModal.classList.contains('is-open')) confirmIdentity.focus({preventScroll:true});});
 
@@ -2049,7 +2061,26 @@ function preventRepeatStage(kind) {
 const deleteDialog=document.getElementById('deleteParticipationDialog');
 const deletePassword=document.getElementById('deleteParticipationPassword');
 const deleteError=document.getElementById('deleteParticipationError');
-let deletionVoter=null;
+let deletionVoter=null, deletionOrigin='personal', deletionRequiresPassword=true;
+function openFullReset(origin) {
+  if(transitionLocked||!VOTERS.includes(selectedVoter)||deleteDialog.open) return;
+  try {
+    const participation=readParticipation(selectedVoter);
+    deletionVoter=selectedVoter; deletionOrigin=origin;
+    deletionRequiresPassword=origin==='personal'||participation.exists;
+    deletePassword.value='';deleteError.textContent='';deletePassword.removeAttribute('aria-invalid');
+    document.getElementById('deleteParticipationTitle').textContent=origin==='resume'?'Começar tudo do zero?':'Excluir respostas?';
+    document.getElementById('deleteParticipationCopy').textContent=origin==='resume'
+      ? (participation.exists?'Todas as respostas deste participante, inclusive as etapas já confirmadas, serão excluídas da apuração. Você voltará à primeira categoria da premiação. Para proteger os votos confirmados, informe a senha de exclusão.':'Seu progresso nas três etapas será apagado. Você voltará à primeira categoria da premiação.')
+      : 'Todas as respostas deste participante nas três dinâmicas serão excluídas da apuração. Só então será possível votar novamente. Esta ação não pode ser desfeita.';
+    document.getElementById('deleteParticipationPasswordLabel').hidden=!deletionRequiresPassword;
+    deletePassword.hidden=!deletionRequiresPassword; deletePassword.required=deletionRequiresPassword;
+    document.getElementById('confirmDeleteParticipation').textContent=origin==='resume'?'Recomeçar toda a votação →':'Excluir e votar novamente →';
+    document.getElementById('deleteParticipationName').textContent=PERSONAL_DISPLAY_NAMES[deletionVoter]??deletionVoter;
+    deleteDialog.showModal();
+    (deletionRequiresPassword?deletePassword:document.getElementById('cancelDeleteParticipation')).focus();
+  } catch (_) {showToast('Não foi possível consultar as respostas salvas.');}
+}
 document.getElementById('personalHome').addEventListener('click',()=>{
   if(transitionLocked||deleteDialog.open)return;
   selectedVoter=''; personalRecords={ballot:null,quiz:null,likely:null};
@@ -2060,25 +2091,30 @@ document.getElementById('personalHome').addEventListener('click',()=>{
 });
 document.getElementById('deleteParticipation').addEventListener('click',()=>{
   if(transitionLocked||!VOTERS.includes(selectedVoter)||!document.getElementById('personalScreen').classList.contains('is-active'))return;
-  deletionVoter=selectedVoter; deletePassword.value='';deleteError.textContent='';deletePassword.removeAttribute('aria-invalid');
-  document.getElementById('deleteParticipationName').textContent=PERSONAL_DISPLAY_NAMES[deletionVoter]??deletionVoter;
-  deleteDialog.showModal();deletePassword.focus();
+  openFullReset('personal');
 });
 document.getElementById('cancelDeleteParticipation').addEventListener('click',()=>deleteDialog.close());
 deletePassword.addEventListener('input',()=>{deleteError.textContent='';deletePassword.removeAttribute('aria-invalid');});
 deleteDialog.addEventListener('close',()=>{deletePassword.value='';deleteError.textContent='';deletePassword.removeAttribute('aria-invalid');deletionVoter=null;});
 document.getElementById('deleteParticipationForm').addEventListener('submit',event=>{
   event.preventDefault();
-  if(!deleteDialog.open||transitionLocked||!deletionVoter||deletionVoter!==selectedVoter||!document.getElementById('personalScreen').classList.contains('is-active'))return;
-  if(deletePassword.value!=='excluirrespostas@'){deleteError.textContent='Senha incorreta. Nenhuma resposta foi excluída.';deletePassword.setAttribute('aria-invalid','true');deletePassword.select();return;}
+  if(!deleteDialog.open||transitionLocked||!deletionVoter||deletionVoter!==selectedVoter)return;
+  const fromResume=deletionOrigin==='resume';
+  if(fromResume ? (!resumeDialog.open||resumeChoice?.voter!==deletionVoter) : !document.getElementById('personalScreen').classList.contains('is-active')) return;
+  try { if(readParticipation(deletionVoter).exists && !deletionRequiresPassword) {
+    deleteDialog.close(); openFullReset(deletionOrigin); return;
+  } } catch (_) {deleteError.textContent='Não foi possível verificar as respostas. Nenhum registro foi excluído.';return;}
+  if(deletionRequiresPassword && deletePassword.value!=='excluirrespostas@'){deleteError.textContent='Senha incorreta. Nenhuma resposta foi excluída.';deletePassword.setAttribute('aria-invalid','true');deletePassword.select();return;}
   const keys=participationKinds.flatMap(kind=>[participationKey(kind,deletionVoter),draftKey(kind,deletionVoter)]);
   try {
     // The same keys are read by the results panel; no independent tally can retain old votes.
     for(const key of keys)localStorage.removeItem(key);
     if(keys.some(key=>localStorage.getItem(key)!==null))throw new Error('Exclusão não confirmada');
   } catch (_) {deleteError.textContent='Não foi possível confirmar a exclusão de todos os registros. A nova votação continua bloqueada.';return;}
-  resetParticipation(); deleteDialog.close(); transitionTo('vote');
-  setTimeout(()=>showToast('Respostas excluídas. Você pode votar novamente.'),reducedMotion()?500:1120);
+  resetParticipation(); deleteDialog.close();
+  if(fromResume) {resumeDialog.close();enterParticipation('vote');}
+  else transitionTo('vote');
+  setTimeout(()=>showToast('Você pode começar novamente pela primeira categoria.'),reducedMotion()?500:1120);
 });
 
 
